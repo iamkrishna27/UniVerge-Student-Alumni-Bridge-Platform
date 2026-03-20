@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniVerge - Impact Tracker Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js for real charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%);
+            min-height: 100vh;
+        }
+        
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        
+        /* Enhanced Card Styles */
+        .impact-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+        }
+        
+        .impact-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Stat Card Styles */
+        .stat-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #6366f1, #ec489a, #14b8a6);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Metric Value Styling */
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        /* Progress Bar Animation */
+        .progress-bar {
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Counter Animation */
+        @keyframes countUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .counter-animation {
+            animation: countUp 0.6s ease-out forwards;
+        }
+        
+        /* Pulse Animation for Live Indicator */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+        }
+        
+        .live-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Tooltip Styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 6px 12px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Dark Mode Styles */
+        .dark-mode {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        }
+        
+        .dark-mode .impact-card {
+            background: rgba(30, 41, 59, 0.95);
+            border-color: rgba(71, 85, 105, 0.5);
+        }
+        
+        .dark-mode .stat-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-color: #334155;
+        }
+        
+        .dark-mode .metric-value {
+  background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
+  -webkit-background-clip: text;
+  background-clip: text; /* standard property */
+  -webkit-text-fill-color: transparent;
+}
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .metric-value {
+                font-size: 1.75rem;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #6366f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4f46e5;
+        }
+        
+        /* Loading Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+    </style>
+</head>
+<body class="transition-colors duration-300">
+    
+    <!-- Navbar -->
+    <nav class="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+            <div class="flex justify-between items-center h-16 md:h-20">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="window.location.href='/'">
+                    <i class="fas fa-chart-line text-3xl text-indigo-600 dark:text-indigo-400"></i>
+                    <div>
+                        <span class="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">Impact Tracker</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 hidden md:block">Real-time Analytics Dashboard</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 tooltip">
+                        <i class="fas fa-moon text-gray-700 dark:text-yellow-400 text-xl"></i>
+                        <span class="tooltip-text">Toggle Dark Mode</span>
+                    </button>
+                    
+                    <!-- Refresh Button -->
+                    <button id="refreshBtn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 tooltip">
+                        <i class="fas fa-sync-alt text-gray-700 dark:text-gray-300 text-xl"></i>
+                        <span class="tooltip-text">Refresh Data</span>
+                    </button>
+                    
+                    <!-- Back to Home -->
+                    <a href="/" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2">
+                        <i class="fas fa-home"></i> Back to Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8 max-w-7xl">
+        
+        <!-- Header Section -->
+        <div class="text-center mb-12">
+            <div class="inline-flex items-center gap-2 bg-indigo-100 dark:bg-indigo-900/30 px-4 py-2 rounded-full mb-4">
+                <i class="fas fa-chart-line text-indigo-600 dark:text-indigo-400"></i>
+                <span class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">LIVE DASHBOARD</span>
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black mb-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Impact Dashboard
+            </h1>
+            <p class="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                Real-time metrics showing how UniVerge is transforming lives through mentorship and community building
+            </p>
+        </div>
+        
+        <!-- Key Metrics Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div class="stat-card" id="metricTotalMentorships">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-users text-3xl text-indigo-500"></i>
+                    <span class="text-xs font-semibold px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full">
+                        <i class="fas fa-arrow-up mr-1"></i> +12.5%
+                    </span>
+                </div>
+                <div class="metric-value text-4xl font-black" id="totalMentorships">0</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Total Mentorships</div>
+                <div class="mt-3 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="progress-bar h-full bg-indigo-500 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="mt-2 text-xs text-gray-400">78% of annual goal</div>
+            </div>
+            
+            <div class="stat-card" id="metricReferrals">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-handshake text-3xl text-green-500"></i>
+                    <span class="text-xs font-semibold px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full">
+                        <i class="fas fa-arrow-up mr-1"></i> +23%
+                    </span>
+                </div>
+                <div class="metric-value text-4xl font-black" id="totalReferrals">0</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Successful Referrals</div>
+                <div class="mt-3 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="progress-bar h-full bg-green-500 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="mt-2 text-xs text-gray-400">↑ 43% YoY growth</div>
+            </div>
+            
+            <div class="stat-card" id="metricEngagement">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-chart-line text-3xl text-purple-500"></i>
+                    <span class="text-xs font-semibold px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full">
+                        <i class="fas fa-arrow-up mr-1"></i> +5%
+                    </span>
+                </div>
+                <div class="metric-value text-4xl font-black" id="engagementRate">0%</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Student Engagement Rate</div>
+                <div class="mt-3 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="progress-bar h-full bg-purple-500 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="mt-2 text-xs text-gray-400">Above industry average</div>
+            </div>
+            
+            <div class="stat-card" id="metricRegions">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-globe text-3xl text-pink-500"></i>
+                    <span class="text-xs font-semibold px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full">
+                        <i class="fas fa-arrow-up mr-1"></i> +8
+                    </span>
+                </div>
+                <div class="metric-value text-4xl font-black" id="activeRegions">0</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Active Regions</div>
+                <div class="mt-3 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="progress-bar h-full bg-pink-500 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="mt-2 text-xs text-gray-400">Expanding globally</div>
+            </div>
+        </div>
+        
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <!-- Mentorship Trends Chart -->
+            <div class="impact-card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-chart-line text-indigo-500"></i> Mentorship Trends
+                    </h2>
+                    <select id="trendPeriod" class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800">
+                        <option value="6">Last 6 Months</option>
+                        <option value="12" selected>Last 12 Months</option>
+                        <option value="24">Last 24 Months</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="mentorshipChart"></canvas>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+                    <i class="fas fa-info-circle"></i> Monthly mentorship sessions growth
+                </p>
+            </div>
+            
+            <!-- Referral Success by Industry -->
+            <div class="impact-card p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-green-500"></i> Referrals by Industry
+                </h2>
+                <div class="chart-container">
+                    <canvas id="industryChart"></canvas>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+                    <i class="fas fa-info-circle"></i> Distribution of successful referrals
+                </p>
+            </div>
+        </div>
+        
+        <!-- Detailed Metrics Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            <!-- Regional Distribution -->
+            <div class="impact-card p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-map-marker-alt text-indigo-500"></i> Regional Distribution
+                </h3>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between mb-1 text-sm">
+                            <span>Rural Midwest</span>
+                            <span class="font-semibold" id="ruralCount">0</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full bg-indigo-500 rounded-full" id="ruralBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1 text-sm">
+                            <span>Urban East Coast</span>
+                            <span class="font-semibold" id="urbanEastCount">0</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full bg-purple-500 rounded-full" id="urbanEastBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1 text-sm">
+                            <span>West Coast</span>
+                            <span class="font-semibold" id="westCoastCount">0</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full bg-pink-500 rounded-full" id="westCoastBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1 text-sm">
+                            <span>International</span>
+                            <span class="font-semibold" id="internationalCount">0</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full bg-cyan-500 rounded-full" id="internationalBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Satisfaction Metrics -->
+            <div class="impact-card p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-star text-yellow-500"></i> Satisfaction Metrics
+                </h3>
+                <div class="text-center mb-4">
+                    <div class="text-5xl font-black text-yellow-500" id="avgRating">0</div>
+                    <div class="flex justify-center gap-1 my-2" id="starRating">
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <i class="fas fa-star text-yellow-400"></i>
+                    </div>
+                    <p class="text-sm text-gray-500">Based on 1,200+ reviews</p>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-sm">
+                            <span>Mentorship Quality</span>
+                            <span class="font-semibold">96%</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full bg-green-500 rounded-full" style="width: 96%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm">
+                            <span>Platform Ease</span>
+                            <span class="font-semibold">94%</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full bg-blue-500 rounded-full" style="width: 94%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm">
+                            <span>Career Impact</span>
+                            <span class="font-semibold">89%</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="progress-bar h-full bg-purple-500 rounded-full" style="width: 89%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="impact-card p-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-bolt text-yellow-500"></i> Live Activity
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-plus text-green-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold">New mentorship request</p>
+                            <p class="text-xs text-gray-500">2 minutes ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                            <i class="fas fa-comment text-purple-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold">New story shared</p>
+                            <p class="text-xs text-gray-500">15 minutes ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                            <i class="fas fa-calendar-check text-blue-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold">Session completed</p>
+                            <p class="text-xs text-gray-500">1 hour ago</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Key Insights & Recommendations -->
+        <div class="impact-card p-8 mb-12">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-lightbulb text-yellow-500"></i> Key Insights & Recommendations
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                    <i class="fas fa-chart-line text-green-600 text-2xl mb-3"></i>
+                    <h3 class="font-bold text-lg mb-2">Rural Outreach Success</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">Mentorship connections from rural areas increased by <span class="font-bold text-green-600">28%</span> last quarter, indicating successful targeted campaigns.</p>
+                </div>
+                <div class="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                    <i class="fas fa-handshake text-purple-600 text-2xl mb-3"></i>
+                    <h3 class="font-bold text-lg mb-2">High Alumni Engagement</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">Over <span class="font-bold text-purple-600">70%</span> of registered alumni actively participate in mentorship or referral activities.</p>
+                </div>
+                <div class="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <i class="fas fa-brain text-blue-600 text-2xl mb-3"></i>
+                    <h3 class="font-bold text-lg mb-2">Skill Gap Identification</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">Data suggests high demand for mentorship in <span class="font-bold text-blue-600">AI/ML and Cybersecurity</span> fields among students.</p>
+                </div>
+                <div class="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                    <i class="fas fa-rocket text-amber-600 text-2xl mb-3"></i>
+                    <h3 class="font-bold text-lg mb-2">Next Steps</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">Focus on expanding alumni network in underrepresented regions and developing specialized career path resources.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Export & Share Section -->
+        <div class="text-center">
+            <button onclick="exportReport()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
+                <i class="fas fa-download mr-2"></i> Export Impact Report
+            </button>
+        </div>
+        
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-16 py-8">
+        <div class="container mx-auto px-4 max-w-7xl text-center">
+            <p class="text-gray-600 dark:text-gray-400">&copy; 2025 UniVerge Impact Tracker. Real-time data updating every 30 seconds.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">Empowering futures through data-driven mentorship</p>
+        </div>
+    </footer>
+    
+    <script>
+        // Impact Tracker Data and Charts
+        
+        // Mock Data (would come from API in production)
+        let impactData = {
+            totalMentorships: 1482,
+            totalReferrals: 942,
+            engagementRate: 95,
+            activeRegions: 34,
+            avgRating: 4.92,
+            monthlyTrends: [85, 92, 108, 124, 145, 168, 189, 212, 238, 267, 298, 332],
+            industryData: {
+                labels: ['Software Engineering', 'Healthcare', 'Finance', 'Education', 'Other'],
+                values: [32, 24, 18, 15, 11]
+            },
+            regionalData: {
+                rural: 287,
+                urbanEast: 456,
+                westCoast: 389,
+                international: 215
+            }
+        };
+        
+        // Chart instances
+        let mentorshipChart, industryChart;
+        
+        // Initialize charts
+        function initCharts() {
+            const ctx1 = document.getElementById('mentorshipChart').getContext('2d');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            
+            mentorshipChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Mentorships',
+                        data: impactData.monthlyTrends,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#6366f1',
+                        pointBorderColor: '#fff',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#cbd5e1'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#e2e8f0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const ctx2 = document.getElementById('industryChart').getContext('2d');
+            industryChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: impactData.industryData.labels,
+                    datasets: [{
+                        data: impactData.industryData.values,
+                        backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec489a', '#8b5cf6'],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Animate counters
+        function animateCounter(element, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const currentValue = Math.floor(progress * (end - start) + start);
+                element.textContent = currentValue;
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    element.textContent = end;
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+        
+        // Update stats with animation
+        function updateStats() {
+            // Update numeric values with animation
+            const totalMentorshipsEl = document.getElementById('totalMentorships');
+            const totalReferralsEl = document.getElementById('totalReferrals');
+            const engagementRateEl = document.getElementById('engagementRate');
+            const activeRegionsEl = document.getElementById('activeRegions');
+            const avgRatingEl = document.getElementById('avgRating');
+            
+            animateCounter(totalMentorshipsEl, 0, impactData.totalMentorships, 1500);
+            animateCounter(totalReferralsEl, 0, impactData.totalReferrals, 1500);
+            animateCounter(engagementRateEl, 0, impactData.engagementRate, 1500);
+            animateCounter(activeRegionsEl, 0, impactData.activeRegions, 1500);
+            animateCounter(avgRatingEl, 0, impactData.avgRating, 1500);
+            
+            // Update progress bars
+            setTimeout(() => {
+                document.querySelectorAll('.progress-bar').forEach(bar => {
+                    if (bar.style.width === '0%') {
+                        bar.style.width = '78%';
+                    }
+                });
+            }, 100);
+            
+            // Update regional counts
+            document.getElementById('ruralCount').textContent = impactData.regionalData.rural;
+            document.getElementById('urbanEastCount').textContent = impactData.regionalData.urbanEast;
+            document.getElementById('westCoastCount').textContent = impactData.regionalData.westCoast;
+            document.getElementById('internationalCount').textContent = impactData.regionalData.international;
+            
+            const total = impactData.regionalData.rural + impactData.regionalData.urbanEast + 
+                         impactData.regionalData.westCoast + impactData.regionalData.international;
+            
+            document.getElementById('ruralBar').style.width = (impactData.regionalData.rural / total * 100) + '%';
+            document.getElementById('urbanEastBar').style.width = (impactData.regionalData.urbanEast / total * 100) + '%';
+            document.getElementById('westCoastBar').style.width = (impactData.regionalData.westCoast / total * 100) + '%';
+            document.getElementById('internationalBar').style.width = (impactData.regionalData.international / total * 100) + '%';
+        }
+        
+        // Refresh data (simulate API call)
+        function refreshData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            refreshBtn.classList.add('animate-spin');
+            
+            setTimeout(() => {
+                // Simulate new data
+                impactData.totalMentorships += Math.floor(Math.random() * 10);
+                impactData.totalReferrals += Math.floor(Math.random() * 8);
+                impactData.engagementRate = Math.min(98, impactData.engagementRate + (Math.random() * 0.5));
+                impactData.activeRegions += Math.random() > 0.7 ? 1 : 0;
+                
+                updateStats();
+                
+                refreshBtn.classList.remove('animate-spin');
+                
+                // Show toast message
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in';
+                toast.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Data refreshed successfully!';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }, 1000);
+        }
+        
+        // Export report
+        function exportReport() {
+            const reportData = {
+                date: new Date().toISOString(),
+                metrics: {
+                    totalMentorships: impactData.totalMentorships,
+                    totalReferrals: impactData.totalReferrals,
+                    engagementRate: impactData.engagementRate,
+                    activeRegions: impactData.activeRegions,
+                    avgRating: impactData.avgRating
+                },
+                monthlyTrends: impactData.monthlyTrends,
+                industryDistribution: impactData.industryData,
+                regionalDistribution: impactData.regionalData
+            };
+            
+            const dataStr = JSON.stringify(reportData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `univerge-impact-report-${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            // Show success message
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-indigo-500 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in';
+            toast.innerHTML = '<i class="fas fa-download mr-2"></i> Report exported successfully!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        // Dark mode toggle
+        function initDarkMode() {
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const isDark = localStorage.getItem('darkMode') === 'true';
+            
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                darkModeToggle.innerHTML = '<i class="fas fa-sun text-yellow-400 text-xl"></i>';
+            }
+            
+            darkModeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                const isDarkNow = document.body.classList.contains('dark-mode');
+                localStorage.setItem('darkMode', isDarkNow);
+                darkModeToggle.innerHTML = isDarkNow ? '<i class="fas fa-sun text-yellow-400 text-xl"></i>' : '<i class="fas fa-moon text-gray-700 dark:text-yellow-400 text-xl"></i>';
+                
+                // Update chart colors
+                if (mentorshipChart) {
+                    mentorshipChart.options.scales.y.grid.color = isDarkNow ? '#334155' : '#e2e8f0';
+                    mentorshipChart.update();
+                }
+            });
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            updateStats();
+            initDarkMode();
+            
+            // Period selector
+            const periodSelect = document.getElementById('trendPeriod');
+            periodSelect.addEventListener('change', (e) => {
+                const months = parseInt(e.target.value);
+                // Simulate different data periods
+                const newData = impactData.monthlyTrends.slice(-months);
+                mentorshipChart.data.datasets[0].data = newData;
+                mentorshipChart.update();
+            });
+            
+            // Refresh button
+            document.getElementById('refreshBtn').addEventListener('click', refreshData);
+            
+            // Auto-refresh every 30 seconds
+            setInterval(refreshData, 30000);
+        });
+        
+        // Add animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fade-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .animate-fade-in {
+                animation: fade-in 0.3s ease-out;
+            }
+            @keyframes spin {
+                from {
+                    transform: rotate(0deg);
+                }
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            .animate-spin {
+                animation: spin 1s linear infinite;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

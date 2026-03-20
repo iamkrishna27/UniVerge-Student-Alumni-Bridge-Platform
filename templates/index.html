@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniVerge - Your Future, Simplified</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+
+    <!-- Navbar with Enhanced Design -->
+    <nav class="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+            <div class="flex justify-between items-center h-16 md:h-20">
+                <!-- Logo with Animation -->
+                <div class="flex items-center space-x-3 cursor-pointer group" onclick="showPage('landing', false)">
+                    <div class="relative">
+                        <i class="fas fa-graduation-cap text-3xl md:text-4xl text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300"></i>
+                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-pink-500 rounded-full animate-pulse"></div>
+                    </div>
+                    <div>
+                        <span class="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">UniVerge</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 hidden md:block">Your Future, Unlocked</p>
+                    </div>
+                </div>
+
+                <!-- Desktop Navigation with Icons -->
+                <div class="hidden md:flex items-center space-x-1 lg:space-x-2">
+                    <button onclick="showPage('landing', false)" class="nav-link px-3 lg:px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 flex items-center gap-2 font-medium">
+                        <i class="fas fa-home text-sm"></i> Home
+                    </button>
+                    <button id="nav-dashboard" onclick="showPage('dashboard')" class="nav-link px-3 lg:px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 flex items-center gap-2 font-medium hidden">
+                        <i class="fas fa-chart-line"></i> Dashboard
+                    </button>
+                    <button id="nav-profile" onclick="showPage('profile')" class="nav-link px-3 lg:px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 flex items-center gap-2 font-medium hidden">
+                        <i class="fas fa-user-circle"></i> Profile
+                    </button>
+                    <button id="nav-storyboard" onclick="showPage('storyboard')" class="nav-link px-3 lg:px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 flex items-center gap-2 font-medium hidden">
+                        <i class="fas fa-book-open"></i> Stories
+                    </button>
+                    <button id="nav-impact-tracker" onclick="showPage('impact-tracker')" class="nav-link px-3 lg:px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 flex items-center gap-2 font-medium hidden">
+                        <i class="fas fa-chart-simple"></i> Impact
+                    </button>
+                    <button id="nav-quick-connect" onclick="showPage('quick-connect')" class="nav-link px-3 lg:px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 flex items-center gap-2 font-medium hidden">
+                        <i class="fas fa-bolt"></i> Connect
+                    </button>
+                    <button id="nav-resource-bank" onclick="showPage('resource-bank')" class="nav-link px-3 lg:px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 flex items-center gap-2 font-medium hidden">
+                        <i class="fas fa-database"></i> Resources
+                    </button>
+                    <button id="nav-confidence-corner" onclick="showPage('confidence-corner')" class="nav-link px-3 lg:px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 flex items-center gap-2 font-medium hidden">
+                        <i class="fas fa-heart"></i> Confidence
+                    </button>
+                </div>
+
+                <!-- Right Side Icons -->
+                <div class="flex items-center gap-3">
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 tooltip">
+                        <i class="fas fa-moon text-gray-700 dark:text-yellow-400 text-xl"></i>
+                        <span class="tooltip-text">Toggle Dark Mode</span>
+                    </button>
+                    
+                    <!-- Notifications -->
+                    <button id="notificationsBtn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 relative notification-badge tooltip">
+                        <i class="fas fa-bell text-gray-700 dark:text-gray-300 text-xl"></i>
+                        <span class="tooltip-text">Notifications</span>
+                    </button>
+                    
+                    <!-- Auth Buttons -->
+                    <button id="nav-auth" onclick="showPage('auth', false)" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                    <button id="nav-logout" onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 hidden">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Message Area with Enhanced Styling -->
+    <div id="message-area" class="container mx-auto mt-6 px-4 max-w-7xl fixed top-20 left-0 right-0 z-50 pointer-events-none">
+        <div class="pointer-events-auto"></div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 md:px-8 py-8 max-w-7xl">
+        
+        <!-- ==================== LANDING PAGE ==================== -->
+        <div id="landing-page" class="page-content active-page animate-fade-in">
+            <!-- Hero Section -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white mb-16 shadow-2xl">
+                <div class="absolute inset-0 bg-black opacity-20"></div>
+                <div class="relative z-10 p-12 md:p-16 text-center">
+                    <div class="animate-slide-up">
+                        <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight">
+                            Your Future,
+                            <span class="bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent">Unlocked</span>
+                        </h1>
+                        <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto opacity-95">
+                            Seamlessly connect with alumni, discover clear career paths, and build a trusted network.
+                            <span class="block text-lg mt-2">✨ Built for First-Gen & Rural Students ✨</span>
+                        </p>
+                        <button onclick="showPage('auth', false)" class="bg-white text-indigo-700 px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300">
+                            <i class="fas fa-rocket mr-2"></i> Get Started Free
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Stats Bar -->
+                <div class="relative z-10 bg-white/10 backdrop-blur-lg border-t border-white/20 py-6 px-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold">1,250+</div>
+                        <div class="text-sm opacity-90"><i class="fas fa-users mr-1"></i> Active Mentorships</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold">95%</div>
+                        <div class="text-sm opacity-90"><i class="fas fa-chart-line mr-1"></i> Engagement Rate</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold">30+</div>
+                        <div class="text-sm opacity-90"><i class="fas fa-globe mr-1"></i> Alumni Regions</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold">4.9⭐</div>
+                        <div class="text-sm opacity-90"><i class="fas fa-star mr-1"></i> User Rating</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Features Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                <div class="card-hover p-8 text-center animate-slide-up animation-delay-100">
+                    <div class="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-handshake text-3xl text-indigo-600 dark:text-indigo-400"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Smart Matching</h3>
+                    <p class="text-gray-600 dark:text-gray-300">AI-powered alumni connections based on your background, interests, and career goals.</p>
+                </div>
+                <div class="card-hover p-8 text-center animate-slide-up animation-delay-200">
+                    <div class="w-20 h-20 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-shield-alt text-3xl text-purple-600 dark:text-purple-400"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Trust System</h3>
+                    <p class="text-gray-600 dark:text-gray-300">Blockchain-backed credibility and verified referrals for reliable connections.</p>
+                </div>
+                <div class="card-hover p-8 text-center animate-slide-up animation-delay-300">
+                    <div class="w-20 h-20 bg-pink-100 dark:bg-pink-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-chart-line text-3xl text-pink-600 dark:text-pink-400"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Career Pathfinder</h3>
+                    <p class="text-gray-600 dark:text-gray-300">Personalized career roadmaps with AI guidance and skill gap analysis.</p>
+                </div>
+            </div>
+            
+            <!-- Call to Action -->
+            <div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-800 dark:to-gray-900 rounded-3xl p-12 text-center">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Your Future?</h2>
+                <p class="text-xl text-gray-600 dark:text-gray-300 mb-8">Join thousands of students and alumni already building meaningful connections.</p>
+                <button onclick="showPage('auth', false)" class="btn-primary-gradient text-white px-8 py-4 rounded-full text-lg font-bold shadow-xl">
+                    <i class="fas fa-user-plus mr-2"></i> Create Free Account
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== AUTH PAGE ==================== -->
+        <div id="auth-page" class="page-content hidden flex items-center justify-center min-h-[80vh]">
+            <div class="card-enhanced w-full max-w-md p-8 animate-scale-up">
+                <div class="text-center mb-8">
+                    <i class="fas fa-graduation-cap text-5xl text-indigo-600 dark:text-indigo-400 mb-3"></i>
+                    <h2 id="auth-title" class="text-3xl font-bold">Welcome Back!</h2>
+                    <p class="text-gray-600 dark:text-gray-300 mt-2">Sign in to continue your journey</p>
+                </div>
+                
+                <form id="auth-form" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">Email Address</label>
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="email" id="auth-email" class="w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800" placeholder="you@example.com" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">Password</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="password" id="auth-password" class="w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800" placeholder="••••••••" required>
+                        </div>
+                    </div>
+                    
+                    <div id="register-fields" class="space-y-4 hidden">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Full Name</label>
+                            <input type="text" id="auth-name" class="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800" placeholder="John Doe">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">I am a...</label>
+                            <select id="auth-userType" class="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                                <option value="student">Student (First-Gen / Rural)</option>
+                                <option value="alumni">Alumni</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Hometown/Region</label>
+                            <input type="text" id="auth-hometown" class="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800" placeholder="e.g., Rural Midwest">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Primary Language</label>
+                            <input type="text" id="auth-language" class="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800" placeholder="English">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="auth-submit-btn" class="btn-primary-gradient w-full py-3 rounded-xl font-bold text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                        <i class="fas fa-arrow-right mr-2"></i> Login
+                    </button>
+                </form>
+                
+                <div class="mt-6 text-center">
+                    <button id="toggle-auth-mode" class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-semibold">
+                        Need an account? Register
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== DASHBOARD PAGE ==================== -->
+        <div id="dashboard-page" class="page-content hidden space-y-8">
+            <!-- Welcome Banner with Avatar -->
+            <div class="card-enhanced p-8 animate-slide-up">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <div id="user-avatar" class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                                👤
+                            </div>
+                            <div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+                        </div>
+                        <div>
+                            <h1 id="dashboard-welcome" class="text-3xl md:text-4xl font-black">Welcome back!</h1>
+                            <p class="text-gray-600 dark:text-gray-300 mt-1">Your personalized career hub is ready</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="btn-secondary-gradient px-5 py-2 rounded-full text-sm font-semibold">
+                            <i class="fas fa-calendar-alt mr-2"></i> This Week
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Grid with Progress Bars -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="stat-card p-6 animate-slide-up animation-delay-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <i class="fas fa-users text-3xl text-indigo-500"></i>
+                        <span class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">+12%</span>
+                    </div>
+                    <div class="text-3xl font-bold">1,250</div>
+                    <div class="text-sm text-gray-500 mt-1">Total Mentorships</div>
+                    <div class="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-indigo-500 rounded-full" style="width: 78%"></div>
+                    </div>
+                </div>
+                <div class="stat-card p-6 animate-slide-up animation-delay-200">
+                    <i class="fas fa-check-circle text-3xl text-green-500 mb-3"></i>
+                    <div class="text-3xl font-bold">820</div>
+                    <div class="text-sm text-gray-500">Successful Referrals</div>
+                    <div class="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-green-500 rounded-full" style="width: 65%"></div>
+                    </div>
+                </div>
+                <div class="stat-card p-6 animate-slide-up animation-delay-300">
+                    <i class="fas fa-user-graduate text-3xl text-purple-500 mb-3"></i>
+                    <div class="text-3xl font-bold">95%</div>
+                    <div class="text-sm text-gray-500">Engagement Rate</div>
+                    <div class="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-purple-500 rounded-full" style="width: 95%"></div>
+                    </div>
+                </div>
+                <div class="stat-card p-6 animate-slide-up animation-delay-400">
+                    <i class="fas fa-handshake text-3xl text-pink-500 mb-3"></i>
+                    <div class="text-3xl font-bold">30+</div>
+                    <div class="text-sm text-gray-500">Active Regions</div>
+                    <div class="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-pink-500 rounded-full" style="width: 85%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Dashboard Content -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Recent Activity -->
+                <div class="card-enhanced p-6 animate-slide-up animation-delay-500">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-clock text-indigo-500"></i> Recent Activity
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user-plus text-green-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold">New connection request</p>
+                                <p class="text-sm text-gray-500">Sarah Johnson wants to connect</p>
+                            </div>
+                            <span class="text-xs text-gray-400">2 min ago</span>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
+                            <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-comment text-purple-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold">New message from mentor</p>
+                                <p class="text-sm text-gray-500">Check out these career resources</p>
+                            </div>
+                            <span class="text-xs text-gray-400">1 hour ago</span>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-calendar-check text-blue-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold">Mentorship session booked</p>
+                                <p class="text-sm text-gray-500">Tomorrow at 3:00 PM</p>
+                            </div>
+                            <span class="text-xs text-gray-400">3 hours ago</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Upcoming Sessions -->
+                <div class="card-enhanced p-6 animate-slide-up animation-delay-600">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-calendar-alt text-purple-500"></i> Upcoming Sessions
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="border-l-4 border-indigo-500 pl-4 py-2">
+                            <p class="font-semibold">Career Coaching with Dr. Smith</p>
+                            <p class="text-sm text-gray-500">Tomorrow, 3:00 PM - 4:00 PM</p>
+                            <button class="mt-2 text-sm text-indigo-600 hover:underline">Join Meeting →</button>
+                        </div>
+                        <div class="border-l-4 border-green-500 pl-4 py-2">
+                            <p class="font-semibold">Resume Review Workshop</p>
+                            <p class="text-sm text-gray-500">Friday, 2:00 PM - 3:30 PM</p>
+                            <button class="mt-2 text-sm text-indigo-600 hover:underline">Register →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Student-Specific Sections -->
+            <div id="student-matching-section" class="hidden">
+                <div class="card-enhanced p-6 animate-slide-up animation-delay-700">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <i class="fas fa-magic text-indigo-500"></i> Alumni Roots Matching
+                        </h3>
+                        <button onclick="simulateMatch()" class="btn-primary-gradient px-5 py-2 rounded-full text-sm font-semibold">
+                            <i class="fas fa-search mr-2"></i> Find a Match
+                        </button>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-300 mb-4">Connect with alumni who share your background and can guide your journey.</p>
+                    <div id="matching-result" class="hidden mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl"></div>
+                </div>
+            </div>
+            
+            <div id="student-career-path-section" class="hidden">
+                <div class="card-enhanced p-6 animate-slide-up animation-delay-800">
+                    <h3 class="text-xl font-bold flex items-center gap-2 mb-4">
+                        <i class="fas fa-brain text-purple-500"></i> AI Career Pathfinder
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-300 mb-4">Personalized career roadmap based on your skills, interests, and background.</p>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span>Software Engineering Path</span>
+                            <span class="text-sm text-green-600">85% match</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-green-500 rounded-full" style="width: 85%"></div>
+                        </div>
+                        <div class="flex justify-between items-center mt-3">
+                            <span>Data Science Path</span>
+                            <span class="text-sm text-blue-600">72% match</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-blue-500 rounded-full" style="width: 72%"></div>
+                        </div>
+                    </div>
+                    <button onclick="showMessage('Pathfinder coming soon with detailed AI recommendations!', 'info')" class="mt-6 btn-primary-gradient w-full py-2 rounded-lg font-semibold">
+                        <i class="fas fa-chart-line mr-2"></i> Explore Full Path
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== PROFILE PAGE ==================== -->
+        <div id="profile-page" class="page-content hidden">
+            <div class="max-w-4xl mx-auto">
+                <div class="card-enhanced p-8 animate-slide-up">
+                    <div class="text-center mb-8">
+                        <div class="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto shadow-xl">
+                            👤
+                        </div>
+                        <h2 class="text-3xl font-bold mt-4" id="profile-name-display">Loading...</h2>
+                        <p class="text-gray-500" id="profile-type-display"></p>
+                    </div>
+                    
+                    <form id="profile-edit-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Full Name</label>
+                            <div id="profile-name" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Email Address</label>
+                            <div id="profile-email" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">User Type</label>
+                            <div id="profile-type" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg capitalize"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Hometown/Region</label>
+                            <input type="text" id="edit-hometown" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Primary Language</label>
+                            <input type="text" id="edit-language" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                        </div>
+                        <div id="edit-profession-row" class="hidden">
+                            <label class="block text-sm font-semibold mb-2">Profession</label>
+                            <input type="text" id="edit-profession" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                        </div>
+                        <div class="md:col-span-2">
+                            <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold shadow-lg">
+                                <i class="fas fa-save mr-2"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== STORYBOARD PAGE ==================== -->
+        <div id="storyboard-page" class="page-content hidden">
+            <div class="text-center mb-10 animate-slide-up">
+                <h1 class="text-4xl md:text-5xl font-black mb-4">✨ Alumni Journeys</h1>
+                <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Real stories from alumni who started just like you. Find inspiration, guidance, and proof that your dreams are achievable.</p>
+            </div>
+            
+            <div id="share-journey-section" class="hidden mb-10">
+                <div class="card-enhanced p-8 animate-slide-up animation-delay-100">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-share-alt text-indigo-500"></i> Share Your Journey
+                    </h3>
+                    <p class="text-gray-600 mb-4">Inspire the next generation by sharing your story.</p>
+                    <form id="share-journey-form" class="space-y-4">
+                        <input type="text" id="story-title" placeholder="Story Title" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                        <textarea id="story-description" rows="5" placeholder="Share your journey - challenges, triumphs, and advice..." class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800"></textarea>
+                        <input type="url" id="story-image-url" placeholder="Image URL (optional)" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                        <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold">
+                            <i class="fas fa-paper-plane mr-2"></i> Publish Story
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="storyboards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Stories will be loaded here -->
+            </div>
+        </div>
+
+        <!-- ==================== IMPACT TRACKER PAGE ==================== -->
+        <div id="impact-tracker-page" class="page-content hidden">
+            <div class="text-center mb-10 animate-slide-up">
+                <h1 class="text-4xl md:text-5xl font-black mb-4">📊 Impact Dashboard</h1>
+                <p class="text-xl text-gray-600 dark:text-gray-300">Real-time metrics showing how UniVerge is transforming lives</p>
+            </div>
+            
+            <!-- Impact Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div class="stat-card p-6 text-center animate-slide-up animation-delay-100">
+                    <i class="fas fa-chalkboard-user text-4xl text-indigo-500 mb-3"></i>
+                    <div class="text-4xl font-bold">1,482</div>
+                    <div class="text-gray-600">Active Mentorships</div>
+                    <div class="mt-3 text-sm text-green-600">↑ 23% from last month</div>
+                </div>
+                <div class="stat-card p-6 text-center animate-slide-up animation-delay-200">
+                    <i class="fas fa-user-plus text-4xl text-green-500 mb-3"></i>
+                    <div class="text-4xl font-bold">+43%</div>
+                    <div class="text-gray-600">Referral Growth (QoQ)</div>
+                    <div class="mt-3 text-sm text-green-600">Accelerating network effects</div>
+                </div>
+                <div class="stat-card p-6 text-center animate-slide-up animation-delay-300">
+                    <i class="fas fa-star text-4xl text-yellow-500 mb-3"></i>
+                    <div class="text-4xl font-bold">4.92/5</div>
+                    <div class="text-gray-600">Average Satisfaction</div>
+                    <div class="mt-3 text-sm text-green-600">Based on 1,200+ reviews</div>
+                </div>
+            </div>
+            
+            <!-- Detailed Metrics -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                <div class="card-enhanced p-6 animate-slide-up animation-delay-400">
+                    <h3 class="text-xl font-bold mb-4">Mentorship by Region</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Rural Midwest</span>
+                                <span class="font-semibold">245</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-indigo-500 rounded-full" style="width: 65%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Urban East Coast</span>
+                                <span class="font-semibold">398</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-purple-500 rounded-full" style="width: 82%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>West Coast</span>
+                                <span class="font-semibold">312</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-pink-500 rounded-full" style="width: 74%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>International</span>
+                                <span class="font-semibold">187</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500 rounded-full" style="width: 48%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-enhanced p-6 animate-slide-up animation-delay-500">
+                    <h3 class="text-xl font-bold mb-4">Top Industries</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Software Engineering</span>
+                                <span class="font-semibold">32%</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-indigo-500 rounded-full" style="width: 32%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Healthcare</span>
+                                <span class="font-semibold">24%</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-green-500 rounded-full" style="width: 24%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Finance</span>
+                                <span class="font-semibold">18%</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-yellow-500 rounded-full" style="width: 18%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Education</span>
+                                <span class="font-semibold">15%</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-purple-500 rounded-full" style="width: 15%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Key Insights -->
+            <div class="card-enhanced p-8 animate-slide-up animation-delay-600">
+                <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-lightbulb text-yellow-500"></i> Key Insights
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                        <i class="fas fa-chart-line text-green-600 text-xl mb-2"></i>
+                        <p class="font-semibold">Rural Engagement Up 28%</p>
+                        <p class="text-sm text-gray-600">Mentorship sessions from rural areas increased by 150+ hours this quarter.</p>
+                    </div>
+                    <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                        <i class="fas fa-handshake text-purple-600 text-xl mb-2"></i>
+                        <p class="font-semibold">Alumni Participation Rate</p>
+                        <p class="text-sm text-gray-600">Over 70% of alumni actively participate in mentorship or referral activities.</p>
+                    </div>
+                    <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                        <i class="fas fa-brain text-blue-600 text-xl mb-2"></i>
+                        <p class="font-semibold">Skill Gap Analysis</p>
+                        <p class="text-sm text-gray-600">High demand for AI/ML and Cybersecurity mentorship among students.</p>
+                    </div>
+                    <div class="p-4 bg-pink-50 dark:bg-pink-900/20 rounded-xl">
+                        <i class="fas fa-globe text-pink-600 text-xl mb-2"></i>
+                        <p class="font-semibold">Global Reach Expanding</p>
+                        <p class="text-sm text-gray-600">Now active in 30+ regions across 12 countries.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== QUICK CONNECT PAGE ==================== -->
+        <div id="quick-connect-page" class="page-content hidden">
+            <div class="text-center mb-10 animate-slide-up">
+                <h1 class="text-4xl md:text-5xl font-black mb-4">⚡ Quick Connect Mentorship</h1>
+                <p class="text-xl text-gray-600 dark:text-gray-300">Instant mentorship sessions. Book or offer office hours in seconds.</p>
+            </div>
+            
+            <div id="alumni-slots-section" class="hidden mb-10">
+                <div class="card-enhanced p-8 animate-slide-up animation-delay-100">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-calendar-plus text-indigo-500"></i> Offer Mentorship Slots
+                    </h3>
+                    <form id="create-slot-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="date" id="slot-date" class="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                        <input type="time" id="slot-time" class="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                        <select id="slot-duration" class="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                            <option value="15">15 minutes</option>
+                            <option value="30" selected>30 minutes</option>
+                            <option value="45">45 minutes</option>
+                            <option value="60">60 minutes</option>
+                        </select>
+                        <div class="md:col-span-3">
+                            <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold">
+                                <i class="fas fa-plus-circle mr-2"></i> Create Slot
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="available-slots-section" class="mb-10">
+                <div class="card-enhanced p-8 animate-slide-up animation-delay-200">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-calendar-check text-green-500"></i> Available Mentorship Slots
+                    </h3>
+                    <div id="available-slots-list" class="space-y-3">
+                        <div class="p-4 border border-gray-200 rounded-xl hover:shadow-md transition">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold">Career Guidance with Dr. Sarah Chen</p>
+                                    <p class="text-sm text-gray-500">Today, 3:00 PM - 3:30 PM</p>
+                                    <p class="text-xs text-gray-400">AI/ML Specialist, Google</p>
+                                </div>
+                                <button class="btn-primary-gradient px-4 py-2 rounded-full text-sm font-semibold">Book Now</button>
+                            </div>
+                        </div>
+                        <div class="p-4 border border-gray-200 rounded-xl hover:shadow-md transition">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold">Resume Review with Michael Rodriguez</p>
+                                    <p class="text-sm text-gray-500">Tomorrow, 2:00 PM - 2:30 PM</p>
+                                    <p class="text-xs text-gray-400">Senior Recruiter, Tech Industry</p>
+                                </div>
+                                <button class="btn-primary-gradient px-4 py-2 rounded-full text-sm font-semibold">Book Now</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="my-slots-section">
+                <div class="card-enhanced p-8 animate-slide-up animation-delay-300">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-clipboard-list text-purple-500"></i> My Mentorship Slots
+                    </h3>
+                    <div id="my-slots-list" class="space-y-3">
+                        <p class="text-gray-500 text-center py-4">No slots scheduled yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== RESOURCE BANK PAGE ==================== -->
+        <div id="resource-bank-page" class="page-content hidden">
+            <div class="text-center mb-10 animate-slide-up">
+                <h1 class="text-4xl md:text-5xl font-black mb-4">📚 Alumni Resource Bank</h1>
+                <p class="text-xl text-gray-600 dark:text-gray-300">Curated resources shared by alumni to help you succeed</p>
+            </div>
+            
+            <div id="alumni-resource-upload-section" class="hidden mb-10">
+                <div class="card-enhanced p-8 animate-slide-up animation-delay-100">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-upload text-indigo-500"></i> Share a Resource
+                    </h3>
+                    <form id="upload-resource-form" class="space-y-4">
+                        <input type="text" id="resource-title" placeholder="Resource Title" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                        <input type="url" id="resource-url" placeholder="Resource URL" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                        <select id="resource-category" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+                            <option value="">Select Category</option>
+                            <option value="Interview Questions">Interview Questions</option>
+                            <option value="Resume Templates">Resume Templates</option>
+                            <option value="Course Playlists">Course Playlists</option>
+                            <option value="Job Portals">Job Portals</option>
+                            <option value="Career Advice">Career Advice</option>
+                        </select>
+                        <textarea id="resource-description" rows="3" placeholder="Description (optional)" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800"></textarea>
+                        <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold">
+                            <i class="fas fa-paper-plane mr-2"></i> Share Resource
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="resource-list-section">
+                <div class="card-enhanced p-8 animate-slide-up animation-delay-200">
+                    <h3 class="text-2xl font-bold mb-6">Available Resources</h3>
+                    <div id="resources-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Resources loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== CONFIDENCE CORNER PAGE ==================== -->
+        <div id="confidence-corner-page" class="page-content hidden">
+            <div class="text-center mb-10 animate-slide-up">
+                <h1 class="text-4xl md:text-5xl font-black mb-4">🗣️ Cultural Confidence Corner</h1>
+                <p class="text-xl text-gray-600 dark:text-gray-300">A safe, anonymous space to share experiences and build confidence</p>
+            </div>
+            
+            <div class="card-enhanced p-8 mb-10 animate-slide-up animation-delay-100">
+                <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-feather-alt text-indigo-500"></i> Share Your Thoughts
+                </h3>
+                <p class="text-gray-600 mb-4">Your identity remains anonymous. Share challenges, victories, or words of encouragement.</p>
+                <form id="confidence-post-form" class="space-y-4">
+                    <textarea id="post-content" rows="5" placeholder="What's on your mind? Your story could inspire someone else..." class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800"></textarea>
+                    <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold">
+                        <i class="fas fa-paper-plane mr-2"></i> Post Anonymously
+                    </button>
+                </form>
+            </div>
+            
+            <div class="card-enhanced p-8 animate-slide-up animation-delay-200">
+                <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-comments text-purple-500"></i> Community Posts
+                </h3>
+                <div id="confidence-posts-container" class="space-y-6">
+                    <!-- Posts loaded here -->
+                </div>
+            </div>
+        </div>
+        
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 dark:bg-gray-950 text-gray-300 py-8 mt-16">
+        <div class="container mx-auto px-4 max-w-7xl">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-graduation-cap text-2xl text-indigo-400"></i>
+                        <span class="text-xl font-bold">UniVerge</span>
+                    </div>
+                    <p class="text-sm">Empowering first-gen and rural students to build their future through meaningful connections.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-3">Platform</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="hover:text-indigo-400 transition">Find a Mentor</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition">Become a Mentor</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition">Success Stories</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-3">Resources</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="hover:text-indigo-400 transition">Career Guides</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition">Scholarships</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition">Community Events</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-3">Connect</h4>
+                    <div class="flex gap-4 text-xl">
+                        <a href="#" class="hover:text-indigo-400 transition"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="hover:text-indigo-400 transition"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="hover:text-indigo-400 transition"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-6 text-center text-sm">
+                <p>&copy; 2025 UniVerge. All rights reserved. Simplifying paths, empowering futures.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/script/script.js"></script>
+</body>
+</html>
