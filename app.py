@@ -3,6 +3,7 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
+from dotenv import load_dotenv
 import random
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
@@ -14,9 +15,6 @@ from datetime import datetime, timedelta
 # Fixed to uz1gfre as per your verification
 DATABASE_URL = "mongodb+srv://krishna:destroyer1357@smartnav.uz1gfre.mongodb.net/univerge_data?retryWrites=true&w=majority"
 DB_NAME = 'univerge_data'
-import os
-from dotenv import load_dotenv
-
 load_dotenv() # This looks for a local .env file
 
 # This tells the app to look for the variables you just typed into Render
