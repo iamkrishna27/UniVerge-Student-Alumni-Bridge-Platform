@@ -14,7 +14,14 @@ from datetime import datetime, timedelta
 # Fixed to uz1gfre as per your verification
 DATABASE_URL = "mongodb+srv://krishna:destroyer1357@smartnav.uz1gfre.mongodb.net/univerge_data?retryWrites=true&w=majority"
 DB_NAME = 'univerge_data'
+import os
+from dotenv import load_dotenv
 
+load_dotenv() # This looks for a local .env file
+
+# This tells the app to look for the variables you just typed into Render
+DATABASE_URL = os.getenv("DATABASE_URL")
+SECRET_KEY = os.getenv("SECRET_KEY")
 # Initialize Flask app
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
