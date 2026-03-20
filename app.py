@@ -15,11 +15,12 @@ from datetime import datetime, timedelta
 # Fixed to uz1gfre as per your verification
 DATABASE_URL = "mongodb+srv://krishna:destroyer1357@smartnav.uz1gfre.mongodb.net/univerge_data?retryWrites=true&w=majority"
 DB_NAME = 'univerge_data'
-load_dotenv() # This looks for a local .env file
+load_dotenv() # This looks for a local .env file [cite: 1]
 
-# This tells the app to look for the variables you just typed into Render
-DATABASE_URL = os.getenv("DATABASE_URL")
-SECRET_KEY = os.getenv("SECRET_KEY")
+# This tells the app to look for the variables you just typed into Render [cite: 1]
+DATABASE_URL = os.getenv("DATABASE_URL", DATABASE_URL)
+SECRET_KEY = os.getenv("SECRET_KEY", "krishna_univerge_2026_local_dev")
+
 # Initialize Flask app
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
@@ -306,5 +307,6 @@ def get_confidence_posts():
     return jsonify({"posts": [doc_to_dict(d) for d in docs], "success": True}), 200
 
 if __name__ == '__main__':
+    # Added dynamic port for Render hosting [cite: 1]
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)

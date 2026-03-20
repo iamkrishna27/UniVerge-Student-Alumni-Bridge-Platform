@@ -9,36 +9,4 @@ numpy
 pandas
 web3==6.11.1
 ipfshttpclient
-
-* **Gunicorn**: Render prefers a production server like `gunicorn`. [cite_start]Add `gunicorn` to your `requirements.txt` file. [cite: 1]
-
-### 2. Connect to Render
-1.  [cite_start]Go to **[Render.com](https://render.com/)** and sign up using your **GitHub account**. [cite: 1]
-2.  [cite_start]Click **"New +"** and select **"Web Service"**. [cite: 1]
-3.  [cite_start]Find your repository: `UniVerge-Student-Alumni-Bridge-Platform` and click **Connect**. [cite: 1]
-
-### 3. Configure the Build
-Fill in the following settings on the Render dashboard:
-* **Name**: `univerge-platform`
-* **Runtime**: `Python 3`
-* [cite_start]**Build Command**: `pip install -r requirements.txt` [cite: 1]
-* [cite_start]**Start Command**: `gunicorn app:app` [cite: 1]
-
-### 4. Add Environment Variables (IMPORTANT)
-[cite_start]Since we are not pushing your `.env` file to GitHub for security, you must manually add your database credentials to Render: [cite: 1]
-1.  [cite_start]On the Render dashboard, go to the **Environment** tab. [cite: 1]
-2.  [cite_start]Click **"Add Environment Variable"**. [cite: 1]
-3.  Add the following:
-    * [cite_start]`DATABASE_URL`: (Paste your MongoDB connection string here) [cite: 1]
-    * [cite_start]`SECRET_KEY`: `krishna_univerge_2026_local_dev` [cite: 1]
-
-### 5. Deploy
-Click **"Create Web Service"**. [cite_start]Render will start building your app. [cite: 1] Once finished, it will provide a URL like `https://univerge-platform.onrender.com`.
-
----
-
-### Why this works for you:
-* [cite_start]**MongoDB Atlas**: Since your database is already in the cloud (Atlas), it will work perfectly with Render. [cite: 1]
-* [cite_start]**Free Tier**: Render's free tier is perfect for hackathon projects, though the first load might take a minute if the site has been inactive. [cite: 1]
-
-**Would you like me to help you update your README with the new live link once you've finished deploying?**
+gunicorn
