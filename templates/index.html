@@ -702,29 +702,22 @@
                 <p class="text-xl text-gray-600 dark:text-gray-300">Curated resources shared by alumni to help you succeed</p>
             </div>
             
-            <div id="alumni-resource-upload-section" class="hidden mb-10">
-                <div class="card-enhanced p-8 animate-slide-up animation-delay-100">
-                    <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
-                        <i class="fas fa-upload text-indigo-500"></i> Share a Resource
-                    </h3>
-                    <form id="upload-resource-form" class="space-y-4">
-                        <input type="text" id="resource-title" placeholder="Resource Title" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
-                        <input type="url" id="resource-url" placeholder="Resource URL" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
-                        <select id="resource-category" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
-                            <option value="">Select Category</option>
-                            <option value="Interview Questions">Interview Questions</option>
-                            <option value="Resume Templates">Resume Templates</option>
-                            <option value="Course Playlists">Course Playlists</option>
-                            <option value="Job Portals">Job Portals</option>
-                            <option value="Career Advice">Career Advice</option>
-                        </select>
-                        <textarea id="resource-description" rows="3" placeholder="Description (optional)" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800"></textarea>
-                        <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold">
-                            <i class="fas fa-paper-plane mr-2"></i> Share Resource
-                        </button>
-                    </form>
-                </div>
-            </div>
+<div id="alumni-resource-upload-section" class="hidden mb-10">
+    <div class="card-enhanced p-8 animate-slide-up">
+        <h3 class="text-2xl font-bold mb-4"><i class="fas fa-upload"></i> Share a Resource</h3>
+        <form id="upload-resource-form" class="space-y-4">
+            <input type="text" id="resource-title" placeholder="Title" class="w-full px-4 py-3 border rounded-xl">
+            <label class="block text-sm font-semibold mb-2">Upload Document (PDF/Doc)</label>
+<input type="file" id="resource-file-input" class="w-full px-4 py-3 border border-gray-300 rounded-xl">
+            <select id="resource-category" class="w-full px-4 py-3 border rounded-xl">
+                <option value="Resume Templates">Resume Templates</option>
+                <option value="Interview Questions">Interview Questions</option>
+            </select>
+            <textarea id="resource-description" rows="3" placeholder="Description" class="w-full px-4 py-3 border rounded-xl"></textarea>
+            <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold">Share Resource</button>
+        </form>
+    </div>
+</div>
             
             <div id="resource-list-section">
                 <div class="card-enhanced p-8 animate-slide-up animation-delay-200">

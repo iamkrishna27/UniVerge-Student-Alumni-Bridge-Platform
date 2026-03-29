@@ -93,45 +93,6 @@ const confidencePostForm = document.getElementById('confidence-post-form');
 const postContentInput = document.getElementById('post-content');
 const confidencePostsContainer = document.getElementById('confidence-posts-container');
 
-// Demo Slots Data
-let demoSlots = [
-    {
-        id: 1,
-        alumni_name: "Dr. Sarah Chen",
-        alumni_id: 101,
-        start_time: new Date(Date.now() + 86400000).toISOString(),
-        end_time: new Date(Date.now() + 86400000 + 1800000).toISOString(),
-        duration_minutes: 30,
-        is_booked: false,
-        topic: "Career Guidance in AI/ML",
-        booked_by: null
-    },
-    {
-        id: 2,
-        alumni_name: "Michael Rodriguez",
-        alumni_id: 102,
-        start_time: new Date(Date.now() + 172800000).toISOString(),
-        end_time: new Date(Date.now() + 172800000 + 2700000).toISOString(),
-        duration_minutes: 45,
-        is_booked: false,
-        topic: "Resume Review & Interview Prep",
-        booked_by: null
-    },
-    {
-        id: 3,
-        alumni_name: "Priya Sharma",
-        alumni_id: 103,
-        start_time: new Date(Date.now() + 259200000).toISOString(),
-        end_time: new Date(Date.now() + 259200000 + 3600000).toISOString(),
-        duration_minutes: 60,
-        is_booked: false,
-        topic: "Data Science Career Path",
-        booked_by: null
-    }
-];
-
-let userBookedSlots = [];
-
 // State Variables
 let isRegisterMode = false;
 let currentUser = null;
@@ -250,7 +211,7 @@ function updateUserAvatar() {
  */
 function showPage(pageId, requireAuth = true) {
     // Check authentication if required
-    if (requireAuth && !localStorage.getItem('user')) {
+    if (requireAuth && !localStorage.getItem('user') && !currentUser) {
         showMessage('Please login to access this page', 'warning');
         showPage('auth', false);
         return;
@@ -274,9 +235,13 @@ function showPage(pageId, requireAuth = true) {
     const targetPage = document.getElementById(`${pageId}-page`);
     if (targetPage) {
         targetPage.classList.remove('hidden');
-        targetPage.classList.add('active-page', 'animate-fade-up');
         
-        // Load page-specific data
+        // Small delay to ensure CSS transitions apply smoothly
+        setTimeout(() => {
+            targetPage.classList.add('active-page', 'animate-fade-up');
+        }, 10);
+        
+        // Load page-specific data explicitly when page is opened
         switch(pageId) {
             case 'dashboard':
                 loadDashboardData();
@@ -755,222 +720,11 @@ async function handleShareJourney(event) {
 }
 
 // ============================================
-// Quick Connect Functions - FIXED BOOKING
+// Quick Connect Functions - DATABASE INTEGRATED
 // ============================================
 
 /**
- * Load Quick Connect page content
- */
-function loadQuickConnect() {
-    if (!currentUser) return;
-    
-    // Show/hide sections based on user type
-    if (currentUser.type === 'alumni') {
-        if (alumniSlotsSection) alumniSlotsSection.classList.remove('hidden');
-        if (availableSlotsSection) availableSlotsSection.classList.add('hidden');
-        loadMySlots();
-    } else {
-        if (alumniSlotsSection) alumniSlotsSection.classList.add('hidden');
-        if (availableSlotsSection) availableSlotsSection.classList.remove('hidden');
-        loadAvailableSlots();
-        loadMySlots();
-    }
-}
-
-/**
- * Load user's mentorship slots
- */
-async function loadMySlots() {
-    if (!mySlotsList) return;
-    
-    mySlotsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading your slots...</div>';
-    
-    setTimeout(() => {
-        const userSlots = userBookedSlots.filter(slot => {
-            if (currentUser.type === 'alumni') {
-                return slot.alumni_id === currentUser.id;
-            } else {
-                return slot.booked_by === currentUser.id;
-            }
-        });
-        
-        if (userSlots.length > 0) {
-            mySlotsList.innerHTML = '';
-            userSlots.forEach(slot => {
-                const slotCard = createMySlotCard(slot);
-                mySlotsList.appendChild(slotCard);
-            });
-        } else {
-            mySlotsList.innerHTML = `
-                <div class="text-center py-8 text-gray-500">
-                    <i class="fas fa-calendar-alt text-3xl mb-2"></i>
-                    <p>No slots scheduled yet</p>
-                </div>
-            `;
-        }
-    }, 500);
-}
-
-/**
- * Load available mentorship slots for students
- */
-async function loadAvailableSlots() {
-    if (!availableSlotsList) return;
-    
-    availableSlotsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading available slots...</div>';
-    
-    setTimeout(() => {
-        const available = demoSlots.filter(slot => !slot.is_booked);
-        
-        if (available.length > 0) {
-            availableSlotsList.innerHTML = '';
-            available.forEach(slot => {
-                const slotCard = createAvailableSlotCard(slot);
-                availableSlotsList.appendChild(slotCard);
-            });
-            
-            // Attach event listeners to all book buttons
-            document.querySelectorAll('.book-slot-btn').forEach(btn => {
-                btn.removeEventListener('click', handleBookClick);
-                btn.addEventListener('click', handleBookClick);
-            });
-        } else {
-            availableSlotsList.innerHTML = `
-                <div class="text-center py-8 text-gray-500">
-                    <i class="fas fa-clock text-3xl mb-2"></i>
-                    <p>No available slots right now</p>
-                    <p class="text-sm mt-1">Check back later!</p>
-                </div>
-            `;
-        }
-    }, 500);
-}
-
-/**
- * Create my slot card
- */
-function createMySlotCard(slot) {
-    const card = document.createElement('div');
-    const startTime = new Date(slot.start_time);
-    
-    card.className = 'p-4 border rounded-xl bg-green-50 dark:bg-green-900/20';
-    card.innerHTML = `
-        <div class="flex justify-between items-center">
-            <div>
-                <p class="font-semibold">${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                <p class="text-sm text-gray-500">${slot.duration_minutes} minutes</p>
-                <p class="text-xs mt-1 text-green-600">
-                    <i class="fas fa-check-circle mr-1"></i> Booked
-                </p>
-                ${slot.topic ? `<p class="text-xs text-gray-500 mt-1">Topic: ${slot.topic}</p>` : ''}
-            </div>
-        </div>
-    `;
-    return card;
-}
-
-/**
- * Create available slot card with working book button
- */
-function createAvailableSlotCard(slot) {
-    const card = document.createElement('div');
-    const startTime = new Date(slot.start_time);
-    const isMobile = window.innerWidth < 640;
-    
-    card.className = 'p-4 border border-green-200 dark:border-green-800 rounded-xl hover:shadow-md transition';
-    card.setAttribute('data-slot-id', slot.id);
-    card.innerHTML = `
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div class="flex-1">
-                <p class="font-semibold text-base">${slot.alumni_name}</p>
-                <p class="text-sm text-gray-500">${formatDate(slot.start_time)} (${slot.duration_minutes} min)</p>
-                ${slot.topic ? `<p class="text-xs text-gray-400 mt-1">${slot.topic}</p>` : ''}
-            </div>
-            <button class="book-slot-btn btn-primary-gradient px-4 py-2 rounded-full text-sm font-semibold w-full sm:w-auto" data-slot-id="${slot.id}">
-                <i class="fas fa-calendar-check mr-1"></i> Book Now
-            </button>
-        </div>
-    `;
-    return card;
-}
-
-/**
- * Handle book button click
- */
-function handleBookClick(event) {
-    event.stopPropagation();
-    const button = event.currentTarget;
-    const slotId = parseInt(button.getAttribute('data-slot-id'));
-    bookSlot(slotId, button);
-}
-
-/**
- * Book a mentorship slot - FIXED WORKING FUNCTION
- */
-function bookSlot(slotId, buttonElement = null) {
-    if (!currentUser || currentUser.type !== 'student') {
-        showMessage('Please login as a student to book slots', 'warning');
-        return;
-    }
-    
-    const slot = demoSlots.find(s => s.id === slotId);
-    if (!slot) {
-        showMessage('Slot not found', 'error');
-        return;
-    }
-    
-    if (slot.is_booked) {
-        showMessage('This slot is already booked!', 'error');
-        loadAvailableSlots();
-        return;
-    }
-    
-    // Disable button and show loading
-    if (buttonElement) {
-        const originalText = buttonElement.innerHTML;
-        buttonElement.disabled = true;
-        buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Booking...';
-        
-        setTimeout(() => {
-            // Book the slot
-            slot.is_booked = true;
-            slot.booked_by = currentUser.id;
-            
-            // Add to user's booked slots
-            userBookedSlots.push({
-                ...slot,
-                booked_by: currentUser.id,
-                booked_at: new Date().toISOString()
-            });
-            
-            showMessage(`Successfully booked a session with ${slot.alumni_name}! Check your slots.`, 'success');
-            
-            // Refresh both lists
-            loadAvailableSlots();
-            loadMySlots();
-            
-            buttonElement.disabled = false;
-            buttonElement.innerHTML = originalText;
-        }, 1000);
-    } else {
-        // Book without button reference
-        setTimeout(() => {
-            slot.is_booked = true;
-            slot.booked_by = currentUser.id;
-            userBookedSlots.push({
-                ...slot,
-                booked_by: currentUser.id,
-                booked_at: new Date().toISOString()
-            });
-            showMessage(`Successfully booked a session with ${slot.alumni_name}!`, 'success');
-            loadAvailableSlots();
-            loadMySlots();
-        }, 500);
-    }
-}
-
-/**
- * Create a new mentorship slot (alumni)
+ * Handles alumni creating a new mentorship slot
  */
 async function handleCreateSlot(event) {
     event.preventDefault();
@@ -979,110 +733,241 @@ async function handleCreateSlot(event) {
         showMessage('Only alumni can create slots', 'warning');
         return;
     }
-    
+
     const date = slotDateInput.value;
     const time = slotTimeInput.value;
-    const duration = parseInt(slotDurationSelect.value);
-    
+    const duration = slotDurationSelect.value;
+
     if (!date || !time) {
-        showMessage('Please select date and time', 'error');
+        showMessage('Please select both date and time', 'error');
         return;
     }
-    
+
     const submitButton = document.querySelector('#create-slot-form button');
     setLoading(submitButton, true, 'Creating...');
-    
-    setTimeout(() => {
-        const startTime = new Date(`${date}T${time}`);
-        const newSlot = {
-            id: demoSlots.length + 1,
-            alumni_name: currentUser.name,
-            alumni_id: currentUser.id,
-            start_time: startTime.toISOString(),
-            duration_minutes: duration,
-            is_booked: false,
-            topic: "Mentorship Session",
-            booked_by: null
-        };
-        
-        demoSlots.push(newSlot);
-        showMessage('Slot created successfully!', 'success');
-        createSlotForm.reset();
-        loadMySlots();
+
+    try {
+        const response = await fetch('/api/slots/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date, time, duration })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showMessage('Slot created successfully!', 'success');
+            createSlotForm.reset();
+            loadMySlots(); // Refresh the list of my slots
+        } else {
+            showMessage(data.message || 'Failed to create slot', 'error');
+        }
+    } catch (error) {
+        console.error('Create slot error:', error);
+        showMessage('Network error. Please check connection.', 'error');
+    } finally {
         setLoading(submitButton, false);
-    }, 1000);
+    }
+}
+
+/**
+ * Fetches real mentorship slots from MongoDB and displays them
+ */
+async function loadAvailableSlots() {
+    if (!availableSlotsList) return;
+
+    availableSlotsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-indigo-500"></i> Loading available slots...</div>';
+
+    try {
+        const response = await fetch('/api/slots/available');
+        const data = await response.json();
+        
+        if (data.success && data.slots.length > 0) {
+            availableSlotsList.innerHTML = ''; 
+            
+            data.slots.forEach(slot => {
+                const startTime = new Date(slot.start_time);
+                
+                const cardHtml = `
+                    <div class="p-4 border border-green-200 dark:border-green-800 rounded-xl hover:shadow-md transition mb-3 bg-white dark:bg-gray-800">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div class="flex-1">
+                                <p class="font-semibold text-base text-indigo-600">${slot.alumni_name}</p>
+                                <p class="text-sm text-gray-500">${startTime.toLocaleString()} (${slot.duration_minutes} min)</p>
+                            </div>
+                            <button class="book-slot-btn btn-primary-gradient px-4 py-2 rounded-full text-sm font-semibold text-white" 
+                                    data-slot-id="${slot.id}">
+                                <i class="fas fa-calendar-check mr-1"></i> Book Now
+                            </button>
+                        </div>
+                    </div>`;
+                
+                availableSlotsList.insertAdjacentHTML('beforeend', cardHtml);
+            });
+            
+            document.querySelectorAll('.book-slot-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    const slotId = e.currentTarget.getAttribute('data-slot-id');
+                    bookSlot(slotId, e.currentTarget);
+                };
+            });
+
+        } else {
+            availableSlotsList.innerHTML = '<p class="text-center text-gray-500 py-4">No available slots found in the database.</p>';
+        }
+    } catch (error) {
+        console.error("Error loading available slots:", error);
+        availableSlotsList.innerHTML = '<p class="text-center text-red-500 py-4">Failed to load slots. Is the server running?</p>';
+    }
+}
+
+function loadQuickConnect() {
+    if (!currentUser) return;
+    if (currentUser.type === 'alumni') {
+        if (alumniSlotsSection) alumniSlotsSection.classList.remove('hidden');
+        if (availableSlotsSection) availableSlotsSection.classList.add('hidden');
+    } else {
+        if (alumniSlotsSection) alumniSlotsSection.classList.add('hidden');
+        if (availableSlotsSection) availableSlotsSection.classList.remove('hidden');
+        loadAvailableSlots(); 
+    }
+    loadMySlots(); 
+}
+
+/**
+ * Consolidated and fixed loadMySlots function
+ */
+async function loadMySlots() {
+    if (!mySlotsList) return;
+    mySlotsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-indigo-500"></i> Loading...</div>';
+    
+    try {
+        const response = await fetch('/api/slots/my');
+        const data = await response.json();
+        
+        if (data.success && data.slots.length > 0) {
+            mySlotsList.innerHTML = '';
+            data.slots.forEach(slot => {
+                const startTime = new Date(slot.start_time);
+                
+                const statusHtml = slot.is_booked ? 
+                    `<p class="text-xs text-green-600 font-bold mt-1"><i class="fas fa-check-circle"></i> Booked by: ${slot.student_name || 'A Student'}</p>` : 
+                    `<p class="text-xs text-gray-400 mt-1">Not booked yet</p>`;
+
+                const cardHtml = `
+                    <div class="p-4 border rounded-xl bg-white dark:bg-gray-800 shadow-sm mb-3">
+                        <p class="font-bold">${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        <p class="text-sm text-gray-500">${slot.duration_minutes} mins</p>
+                        ${statusHtml}
+                    </div>`;
+                mySlotsList.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        } else {
+            mySlotsList.innerHTML = '<p class="text-center py-8 text-gray-500">No sessions scheduled.</p>';
+        }
+    } catch (error) {
+        console.error("Error loading my slots:", error);
+        mySlotsList.innerHTML = '<p class="text-center py-4 text-red-500">Error fetching slots. Please try again.</p>';
+    }
+}
+
+async function bookSlot(slotId, buttonElement) {
+    if (!currentUser || currentUser.type !== 'student') {
+        showMessage('Please login as a student to book slots', 'warning');
+        return;
+    }
+
+    const originalText = buttonElement.innerHTML;
+    buttonElement.disabled = true;
+    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Booking...';
+
+    try {
+        const response = await fetch(`/api/slots/book/${slotId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage('Successfully booked! The Alumni will see your name.', 'success');
+            loadAvailableSlots(); 
+            loadMySlots();
+        } else {
+            showMessage(data.message || 'Booking failed', 'error');
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Booking error:', error);
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = originalText;
+    }
 }
 
 // ============================================
-// Resource Bank Functions
+// Resource Bank - DIRECT FILE UPLOAD VERSION
 // ============================================
 
-/**
- * Load resources
- */
 async function loadResources() {
     if (!resourcesContainer) return;
-    
-    resourcesContainer.innerHTML = `
-        <div class="col-span-full text-center py-8">
-            <i class="fas fa-spinner fa-spin text-3xl text-indigo-500"></i>
-            <p class="mt-2">Loading resources...</p>
-        </div>
-    `;
-    
-    setTimeout(() => {
-        resourcesContainer.innerHTML = `
-            <div class="card-enhanced p-5 hover:shadow-lg transition">
-                <i class="fas fa-file-alt text-2xl text-indigo-500 mb-2"></i>
-                <h3 class="font-bold text-lg">Top 50 Interview Questions</h3>
-                <p class="text-sm text-gray-500 mt-1">Shared by alumni from Google</p>
-                <a href="#" class="inline-block mt-3 text-indigo-600 hover:underline">Access Resource →</a>
-            </div>
-            <div class="card-enhanced p-5 hover:shadow-lg transition">
-                <i class="fas fa-file-word text-2xl text-green-500 mb-2"></i>
-                <h3 class="font-bold text-lg">Resume Template for First-Gen Students</h3>
-                <p class="text-sm text-gray-500 mt-1">Downloadable template</p>
-                <a href="#" class="inline-block mt-3 text-indigo-600 hover:underline">Access Resource →</a>
-            </div>
-            <div class="card-enhanced p-5 hover:shadow-lg transition">
-                <i class="fas fa-chalkboard-user text-2xl text-purple-500 mb-2"></i>
-                <h3 class="font-bold text-lg">Career Path Guide</h3>
-                <p class="text-sm text-gray-500 mt-1">From rural roots to tech leadership</p>
-                <a href="#" class="inline-block mt-3 text-indigo-600 hover:underline">Access Resource →</a>
-            </div>
-        `;
-    }, 500);
+    if (currentUser.type === 'alumni') alumniResourceUploadSection.classList.remove('hidden');
+    else alumniResourceUploadSection.classList.add('hidden');
+
+    try {
+        const response = await fetch('/api/resources');
+        const data = await response.json();
+        if (data.success) {
+            resourcesContainer.innerHTML = data.resources.map(res => `
+                <div class="card-enhanced p-5 animate-fade-in">
+                    <i class="fas fa-file-pdf text-indigo-500 text-2xl"></i>
+                    <h3 class="font-bold mt-2">${res.title}</h3>
+                    <p class="text-xs text-gray-400 mb-2">${res.category}</p>
+                    <a href="${res.url}" target="_blank" class="btn-primary-gradient inline-block px-4 py-2 rounded-lg text-white text-xs text-center w-full">
+                        <i class="fas fa-download mr-1"></i> Download
+                    </a>
+                </div>
+            `).join('');
+        }
+    } catch (error) { console.error(error); }
 }
 
-/**
- * Handle resource upload
- */
 async function handleResourceUpload(event) {
     event.preventDefault();
-    
-    if (!currentUser || currentUser.type !== 'alumni') {
-        showMessage('Only alumni can upload resources', 'warning');
+    const fileInput = document.getElementById('resource-file-input');
+    const title = document.getElementById('resource-title').value;
+    const category = document.getElementById('resource-category').value;
+
+    if (!fileInput.files[0]) {
+        showMessage("Please select a file to upload", "error");
         return;
     }
-    
-    const title = resourceTitleInput.value.trim();
-    const url = resourceUrlInput.value.trim();
-    const category = resourceCategorySelect.value;
-    
-    if (!title || !url || !category) {
-        showMessage('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    const submitButton = document.querySelector('#upload-resource-form button');
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('title', title);
+    formData.append('category', category);
+    formData.append('description', document.getElementById('resource-description').value);
+
+    const submitButton = event.target.querySelector('button');
     setLoading(submitButton, true, 'Uploading...');
-    
-    setTimeout(() => {
-        showMessage('Resource uploaded successfully!', 'success');
-        uploadResourceForm.reset();
-        loadResources();
+
+    try {
+        const response = await fetch('/api/resources/create', {
+            method: 'POST',
+            body: formData 
+        });
+
+        if (response.ok) {
+            showMessage('File uploaded successfully!', 'success');
+            event.target.reset();
+            loadResources(); // This refreshes the download list
+        }
+    } catch (error) {
+        showMessage("Upload failed", "error");
+    } finally {
         setLoading(submitButton, false);
-    }, 1000);
+    }
 }
 
 // ============================================
@@ -1090,72 +975,69 @@ async function handleResourceUpload(event) {
 // ============================================
 
 /**
- * Load confidence corner posts
+ * Load confidence corner posts from MongoDB
  */
 async function loadConfidencePosts() {
     if (!confidencePostsContainer) return;
     
-    confidencePostsContainer.innerHTML = `
-        <div class="text-center py-8">
-            <i class="fas fa-spinner fa-spin text-3xl text-indigo-500"></i>
-            <p class="mt-2">Loading community posts...</p>
-        </div>
-    `;
+    confidencePostsContainer.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
     
-    setTimeout(() => {
-        confidencePostsContainer.innerHTML = `
-            <div class="card-enhanced p-5">
-                <p class="text-gray-700 dark:text-gray-300">"Coming from a rural town, I never thought I'd make it in tech. UniVerge connected me with a mentor who changed my life. Never give up!"</p>
-                <div class="flex justify-between items-center mt-3">
-                    <span class="text-sm text-gray-500"><i class="fas fa-user-secret mr-1"></i> Anonymous</span>
-                    <span class="text-xs text-gray-400">2 days ago</span>
-                </div>
-            </div>
-            <div class="card-enhanced p-5">
-                <p class="text-gray-700 dark:text-gray-300">"Being a first-gen student is hard, but knowing there's a community that understands makes all the difference. Thank you UniVerge!"</p>
-                <div class="flex justify-between items-center mt-3">
-                    <span class="text-sm text-gray-500"><i class="fas fa-user-secret mr-1"></i> Anonymous</span>
-                    <span class="text-xs text-gray-400">5 days ago</span>
-                </div>
-            </div>
-            <div class="card-enhanced p-5">
-                <p class="text-gray-700 dark:text-gray-300">"The mentorship program helped me land my first internship. So grateful for this community!"</p>
-                <div class="flex justify-between items-center mt-3">
-                    <span class="text-sm text-gray-500"><i class="fas fa-user-secret mr-1"></i> Anonymous</span>
-                    <span class="text-xs text-gray-400">1 week ago</span>
-                </div>
-            </div>
-        `;
-    }, 500);
+    try {
+        const response = await fetch('/api/confidence_corner/posts');
+        const data = await response.json();
+        
+        if (data.success && data.posts.length > 0) {
+            confidencePostsContainer.innerHTML = '';
+            data.posts.forEach(post => {
+                const date = new Date(post.created_at).toLocaleDateString();
+                const postCard = document.createElement('div');
+                postCard.className = 'card-enhanced p-5 animate-fade-in mb-4';
+                postCard.innerHTML = `
+                    <p class="text-gray-700 dark:text-gray-300">"${post.content}"</p>
+                    <div class="flex justify-between items-center mt-3">
+                        <span class="text-sm text-gray-500"><i class="fas fa-user-secret mr-1"></i> Anonymous</span>
+                        <span class="text-xs text-gray-400">${date}</span>
+                    </div>
+                `;
+                confidencePostsContainer.appendChild(postCard);
+            });
+        } else {
+            confidencePostsContainer.innerHTML = '<p class="text-center text-gray-500">No community posts yet. Be the first!</p>';
+        }
+    } catch (error) {
+        console.error("Error loading posts:", error);
+    }
 }
 
 /**
- * Handle confidence post submission
+ * Handle confidence post submission to Backend
  */
 async function handleConfidencePost(event) {
     event.preventDefault();
-    
-    if (!currentUser) {
-        showMessage('Please login to post', 'warning');
-        return;
-    }
-    
     const content = postContentInput.value.trim();
     
-    if (!content) {
-        showMessage('Please write something before posting', 'error');
-        return;
-    }
+    if (!content) return;
     
     const submitButton = document.querySelector('#confidence-post-form button');
     setLoading(submitButton, true, 'Posting...');
     
-    setTimeout(() => {
-        showMessage('Your post has been shared anonymously!', 'success');
-        postContentInput.value = '';
-        loadConfidencePosts();
+    try {
+        const response = await fetch('/api/confidence_corner/post', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+        });
+        
+        if (response.ok) {
+            showMessage('Post shared anonymously!', 'success');
+            postContentInput.value = '';
+            loadConfidencePosts();
+        }
+    } catch (error) {
+        showMessage('Post failed. Check connection.', 'error');
+    } finally {
         setLoading(submitButton, false);
-    }, 1000);
+    }
 }
 
 /**
@@ -1262,9 +1144,17 @@ async function init() {
     // Set up event listeners
     setupEventListeners();
     
-    // Show appropriate page based on auth status
+    // FIXED: Prevent forced redirect on page refresh
     if (currentUser) {
-        showPage('dashboard');
+        updateNavUI(currentUser);
+        // Only redirect to dashboard if the user is on the landing or auth page
+        const currentPage = document.querySelector('.active-page');
+        if (!currentPage || currentPage.id === 'landing-page' || currentPage.id === 'auth-page') {
+            showPage('dashboard');
+        } else {
+            // Re-trigger the data load for the page they are currently on
+            showPage(currentPage.id.replace('-page', ''));
+        }
     } else {
         showPage('landing', false);
     }
@@ -1284,7 +1174,7 @@ function setupEventListeners() {
     // Storyboard form
     if (shareJourneyForm) shareJourneyForm.addEventListener('submit', handleShareJourney);
     
-    // Quick connect form
+    // Quick connect form (ADDED missing handler linkage)
     if (createSlotForm) createSlotForm.addEventListener('submit', handleCreateSlot);
     
     // Resource form
