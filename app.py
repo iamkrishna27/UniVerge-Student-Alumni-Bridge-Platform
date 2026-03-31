@@ -9,7 +9,6 @@ from pymongo.errors import DuplicateKeyError
 from bson.objectid import ObjectId
 import re
 from datetime import datetime, timedelta
-# Added for secure file handling
 from werkzeug.utils import secure_filename
 
 # --- Database Configuration ---
@@ -23,7 +22,6 @@ CORS(app)
 # --- File Upload Configuration ---
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# Ensure the physical folder exists on the server
 os.makedirs(UPLOAD_FOLDER, exist_ok=True) 
 
 # --- MongoDB Setup ---
@@ -78,13 +76,11 @@ def doc_to_dict(doc):
 def index():
     return render_template('index.html')
 
-# --- Static Serving ---
 @app.route('/script/<path:filename>')
 def serve_script_static(filename):
     script_dir = os.path.join(app.root_path, 'script')
     return send_from_directory(script_dir, filename)
 
-# Route to let students download physical files
 @app.route('/uploads/<filename>')
 def downloaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -159,16 +155,14 @@ def update_profile():
     current_user = doc_to_dict(users_collection.find_one({"_id": ObjectId(current_user['id'])}))
     return jsonify({"user": current_user, "success": True}), 200
 
-# --- Resource Bank (REWRITTEN FOR FILE UPLOADS) ---
+# --- Resource Bank ---
 
 @app.route('/api/resources/create', methods=['POST'])
 def create_resource():
     global current_user
-    # Security check: Must be an alumni to upload
     if not current_user or current_user['type'] != 'alumni':
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 
-    # Use request.files for the document and request.form for the text data
     file = request.files.get('file')
     title = request.form.get('title')
     category = request.form.get('category')
@@ -177,11 +171,11 @@ def create_resource():
     if file and title:
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path) # Physically save file to 'uploads/'
+        file.save(file_path)
         
         res = {
             "title": title,
-            "url": f"/uploads/{filename}", # Store the download link
+            "url": f"/uploads/{filename}",
             "category": category,
             "description": description,
             "alumni_id": ObjectId(current_user['id']),
@@ -203,24 +197,31 @@ def get_resources():
 @app.route('/api/slots/create', methods=['POST'])
 def create_mentorship_slot():
     global current_user
-    if not current_user or current_user['type'] != 'alumni': return jsonify({"success": False}), 403
+    if not current_user or current_user['type'] != 'alumni': 
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+    
     data = request.get_json()
     try:
         start_time = datetime.strptime(f"{data.get('date')} {data.get('time')}", '%Y-%m-%d %H:%M')
         new_slot = {
-            "alumni_id": ObjectId(current_user['id']), "alumni_name": current_user['name'],
-            "start_time": start_time, "duration_minutes": int(data.get('duration', 30)), "is_booked": False
+            "alumni_id": ObjectId(current_user['id']), 
+            "alumni_name": current_user['name'],
+            "start_time": start_time, 
+            "duration_minutes": int(data.get('duration', 30)), 
+            "is_booked": False,
+            "meeting_link": data.get('meeting_link', '')
         }
         mentorship_slots_collection.insert_one(new_slot)
         return jsonify({"success": True}), 201
-    except Exception as e: return jsonify({"message": str(e), "success": False}), 500
-
+    except Exception as e: 
+        print("Error creating slot:", str(e))
+        return jsonify({"message": str(e), "success": False}), 500  
+    
 @app.route('/api/slots/available', methods=['GET'])
 def get_available_slots():
     slots = list(mentorship_slots_collection.find({"is_booked": False, "start_time": {"$gte": datetime.now()}}).sort("start_time", 1))
     return jsonify({"slots": [doc_to_dict(s) for s in slots], "success": True}), 200
 
-# NEW: API to book a slot
 @app.route('/api/slots/book/<slot_id>', methods=['POST'])
 def book_slot(slot_id):
     global current_user
@@ -240,14 +241,12 @@ def book_slot(slot_id):
         return jsonify({"success": True, "message": "Slot successfully booked!"}), 200
     return jsonify({"success": False, "message": "Slot is already taken or unavailable."}), 400
 
-# NEW: API to get a user's specific slots
 @app.route('/api/slots/my', methods=['GET'])
 def get_my_slots():
     global current_user
     if not current_user:
         return jsonify({"success": False, "message": "Unauthorized"}), 401
     
-    # If alumni, find slots they created. If student, find slots they booked.
     if current_user['type'] == 'alumni':
         query = {"alumni_id": ObjectId(current_user['id'])}
     else:
@@ -272,13 +271,73 @@ def get_confidence_posts():
     docs = list(confidence_corner_posts_collection.find({"is_deleted": False}).sort("created_at", -1))
     return jsonify({"posts": [doc_to_dict(d) for d in docs], "success": True}), 200
 
-# --- Storyboards & Impact ---
+# --- Storyboards ---
+
+@app.route('/api/storyboards/create', methods=['POST'])
+def create_story():
+    global current_user
+    if not current_user or current_user['type'] != 'alumni':
+        return jsonify({"success": False, "message": "Only alumni can post stories."}), 403
+    
+    data = request.get_json()
+    new_story = {
+        "alumni_id": ObjectId(current_user['id']),
+        "name": current_user['name'],
+        "profession": current_user.get('profession', 'Alumni'),
+        "hometown": current_user.get('hometown', ''),
+        "story_title": data.get('title'),
+        "story": data.get('description'),
+        "image_url": data.get('image_url', ''), 
+        "created_at": datetime.now()
+    }
+    
+    db.stories.insert_one(new_story) 
+    return jsonify({"success": True, "message": "Story published!"}), 201
 
 @app.route('/api/storyboards', methods=['GET'])
 def get_storyboards():
-    alumni = list(users_collection.find({"type": "alumni", "story": {"$exists": True}}))
-    stories = [{"name": a['name'], "story": a['story'], "story_title": a.get('story_title')} for a in alumni]
-    return jsonify({"storyboards": stories, "success": True}), 200
+    docs = list(db.stories.find().sort("created_at", -1))
+    return jsonify({"storyboards": [doc_to_dict(d) for d in docs], "success": True}), 200
+
+# --- Phase 2: Alumni Search & Feedback ---
+
+@app.route('/api/alumni', methods=['GET'])
+def search_alumni():
+    search_term = request.args.get('search', '').lower()
+    alumni_list = list(users_collection.find({"type": "alumni"}))
+    
+    results = []
+    for al in alumni_list:
+        name = al.get('name', '').lower()
+        prof = (al.get('profession') or '').lower()
+        
+        if search_term in name or search_term in prof:
+            al_dict = doc_to_dict(al)
+            al_dict.pop('password', None)
+            results.append(al_dict)
+
+    return jsonify({"alumni": results, "success": True}), 200
+
+@app.route('/api/feedback/<slot_id>', methods=['POST'])
+def submit_feedback(slot_id):
+    global current_user
+    if not current_user or current_user['type'] != 'student':
+        return jsonify({"success": False, "message": "Only students can leave feedback."}), 403
+
+    data = request.get_json()
+    feedback_doc = {
+        "slot_id": ObjectId(slot_id),
+        "student_id": ObjectId(current_user['id']),
+        "student_name": current_user['name'],
+        "rating": data.get('rating'),
+        "review": data.get('review'),
+        "created_at": datetime.now()
+    }
+    
+    db.feedback.insert_one(feedback_doc)
+    mentorship_slots_collection.update_one({"_id": ObjectId(slot_id)}, {"$set": {"is_reviewed": True}})
+
+    return jsonify({"success": True, "message": "Thank you for your feedback!"}), 201
 
 @app.route('/impact-tracker-dummy-content')
 def serve_impact_tracker_dummy_content():

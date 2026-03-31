@@ -357,20 +357,19 @@
             </div>
             
             <!-- Student-Specific Sections -->
-            <div id="student-matching-section" class="hidden">
-                <div class="card-enhanced p-6 animate-slide-up animation-delay-700">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-bold flex items-center gap-2">
-                            <i class="fas fa-magic text-indigo-500"></i> Alumni Roots Matching
-                        </h3>
-                        <button onclick="simulateMatch()" class="btn-primary-gradient px-5 py-2 rounded-full text-sm font-semibold">
-                            <i class="fas fa-search mr-2"></i> Find a Match
-                        </button>
-                    </div>
-                    <p class="text-gray-600 dark:text-gray-300 mb-4">Connect with alumni who share your background and can guide your journey.</p>
-                    <div id="matching-result" class="hidden mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl"></div>
-                </div>
-            </div>
+    <div id="student-matching-section" class="mb-8 hidden">
+    <div class="flex justify-between items-end mb-4">
+        <h3 class="text-xl font-bold border-b-2 border-indigo-500 pb-1 inline-block">Find a Mentor</h3>
+    </div>
+    
+    <div class="mb-6 relative">
+        <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
+        <input type="text" id="alumni-search-input" onkeyup="loadAlumniDirectory()" placeholder="Search by name, company, or profession..." class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 shadow-sm">
+    </div>
+
+    <div id="alumni-directory-results" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        </div>
+</div>
             
             <div id="student-career-path-section" class="hidden">
                 <div class="card-enhanced p-6 animate-slide-up animation-delay-800">
@@ -433,6 +432,18 @@
                         <div>
                             <label class="block text-sm font-semibold mb-2">Primary Language</label>
                             <input type="text" id="edit-language" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+
+                            <div id="student-extra-fields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">My Skills (comma separated)</label>
+        <input type="text" id="edit-skills" placeholder="e.g. Python, React, UI Design" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">My Interests</label>
+        <input type="text" id="edit-interests" placeholder="e.g. Machine Learning, Startups" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+    </div>
+</div>
+
                         </div>
                         <div id="edit-profession-row" class="hidden">
                             <label class="block text-sm font-semibold mb-2">Profession</label>
@@ -636,20 +647,23 @@
                         <i class="fas fa-calendar-plus text-indigo-500"></i> Offer Mentorship Slots
                     </h3>
                     <form id="create-slot-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <input type="date" id="slot-date" class="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
-                        <input type="time" id="slot-time" class="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
-                        <select id="slot-duration" class="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
-                            <option value="15">15 minutes</option>
-                            <option value="30" selected>30 minutes</option>
-                            <option value="45">45 minutes</option>
-                            <option value="60">60 minutes</option>
-                        </select>
-                        <div class="md:col-span-3">
-                            <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold">
-                                <i class="fas fa-plus-circle mr-2"></i> Create Slot
-                            </button>
-                        </div>
-                    </form>
+    <input type="date" id="slot-date" class="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800" required>
+    <input type="time" id="slot-time" class="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800" required>
+    <select id="slot-duration" class="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+        <option value="15">15 minutes</option>
+        <option value="30" selected>30 minutes</option>
+        <option value="45">45 minutes</option>
+        <option value="60">60 minutes</option>
+    </select>
+    <div class="md:col-span-3">
+        <input type="url" id="slot-meeting-link" placeholder="Google Meet Link (e.g., https://meet.google.com/abc-defg-hij)" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800" required>
+    </div>
+    <div class="md:col-span-3">
+        <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold">
+            <i class="fas fa-plus-circle mr-2"></i> Create Slot
+        </button>
+    </div>
+</form>
                 </div>
             </div>
             
@@ -709,9 +723,12 @@
             <input type="text" id="resource-title" placeholder="Title" class="w-full px-4 py-3 border rounded-xl">
             <label class="block text-sm font-semibold mb-2">Upload Document (PDF/Doc)</label>
 <input type="file" id="resource-file-input" class="w-full px-4 py-3 border border-gray-300 rounded-xl">
-            <select id="resource-category" class="w-full px-4 py-3 border rounded-xl">
-                <option value="Resume Templates">Resume Templates</option>
-                <option value="Interview Questions">Interview Questions</option>
+            <select id="resource-category" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800" required>
+    <option value="" disabled selected>Select Category</option>
+    <option value="Interview Prep">Interview Prep</option>
+    <option value="Resume Templates">Resume Templates</option>
+    <option value="Coding Materials">Coding Materials</option>
+    <option value="Other">Other</option>
             </select>
             <textarea id="resource-description" rows="3" placeholder="Description" class="w-full px-4 py-3 border rounded-xl"></textarea>
             <button type="submit" class="btn-primary-gradient w-full py-3 rounded-xl font-bold">Share Resource</button>
@@ -722,6 +739,20 @@
             <div id="resource-list-section">
                 <div class="card-enhanced p-8 animate-slide-up animation-delay-200">
                     <h3 class="text-2xl font-bold mb-6">Available Resources</h3>
+                    <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="md:col-span-2">
+        <input type="text" id="resource-search-input" onkeyup="filterResources()" placeholder="Search by title or keyword..." class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+    </div>
+    <div>
+        <select id="resource-filter-select" onchange="filterResources()" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800">
+            <option value="All">All Categories</option>
+            <option value="Interview Prep">Interview Prep</option>
+            <option value="Resume Templates">Resume Templates</option>
+            <option value="Coding Materials">Coding Materials</option>
+            <option value="Other">Other</option>
+        </select>
+    </div>
+</div>
                     <div id="resources-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <!-- Resources loaded here -->
                     </div>
@@ -802,7 +833,37 @@
             </div>
         </div>
     </footer>
-
+<div id="feedback-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all animate-fade-up">
+        <h3 class="text-xl font-bold mb-2">Rate Your Session</h3>
+        <p class="text-sm text-gray-500 mb-4">How was your mentorship meeting?</p>
+        
+        <form id="feedback-form" onsubmit="submitFeedback(event)">
+            <input type="hidden" id="feedback-slot-id">
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Rating (1-5 Stars)</label>
+                <select id="feedback-rating" class="w-full px-4 py-3 border border-gray-300 rounded-xl dark:bg-gray-700" required>
+                    <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
+                    <option value="4">⭐⭐⭐⭐ (Good)</option>
+                    <option value="3">⭐⭐⭐ (Average)</option>
+                    <option value="2">⭐⭐ (Below Average)</option>
+                    <option value="1">⭐ (Poor)</option>
+                </select>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium mb-2">Write a review</label>
+                <textarea id="feedback-review" rows="3" placeholder="What did you learn?" class="w-full px-4 py-3 border border-gray-300 rounded-xl dark:bg-gray-700" required></textarea>
+            </div>
+            
+            <div class="flex gap-3">
+                <button type="button" onclick="closeFeedbackModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition">Cancel</button>
+                <button type="submit" class="flex-1 btn-primary-gradient px-4 py-2 rounded-xl font-semibold text-white">Submit Rating</button>
+            </div>
+        </form>
+    </div>
+</div>
     <!-- JavaScript -->
     <script src="/script/script.js"></script>
 </body>

@@ -488,18 +488,21 @@ async function getCurrentUser() {
 function loadDashboardData() {
     if (!currentUser) return;
     
-    // Update welcome message
     if (dashboardWelcome) {
         dashboardWelcome.innerHTML = `Welcome back, ${currentUser.name}! <i class="fas fa-hand-peace"></i>`;
     }
     
-    // Show/hide student-specific sections
     const isStudent = currentUser.type === 'student';
     if (studentMatchingSection) {
         studentMatchingSection.classList.toggle('hidden', !isStudent);
     }
     if (studentCareerPathSection) {
         studentCareerPathSection.classList.toggle('hidden', !isStudent);
+    }
+
+    // Trigger the real directory search for students!
+    if (isStudent) {
+        loadAlumniDirectory();
     }
 }
 
@@ -567,19 +570,19 @@ function loadUserProfile() {
     if (editHometown) editHometown.value = currentUser.hometown || '';
     if (editLanguage) editLanguage.value = currentUser.language || '';
     
-    // Update profile name display
     const profileNameDisplay = document.getElementById('profile-name-display');
     if (profileNameDisplay) profileNameDisplay.textContent = currentUser.name || 'User';
     
-    const profileTypeDisplay = document.getElementById('profile-type-display');
-    if (profileTypeDisplay) profileTypeDisplay.textContent = currentUser.type === 'alumni' ? 'Alumni Member' : 'Student Member';
-    
-    // Show/hide profession field for alumni
     if (currentUser.type === 'alumni') {
         if (editProfessionRow) editProfessionRow.classList.remove('hidden');
         if (editProfession) editProfession.value = currentUser.profession || '';
+        document.getElementById('student-extra-fields').classList.add('hidden');
     } else {
         if (editProfessionRow) editProfessionRow.classList.add('hidden');
+        // NEW: Show Student Fields
+        document.getElementById('student-extra-fields').classList.remove('hidden');
+        document.getElementById('edit-skills').value = currentUser.skills || '';
+        document.getElementById('edit-interests').value = currentUser.interests || '';
     }
 }
 
@@ -588,11 +591,7 @@ function loadUserProfile() {
  */
 async function saveProfileChanges(event) {
     event.preventDefault();
-    
-    if (!currentUser) {
-        showMessage('Please login to update profile', 'warning');
-        return;
-    }
+    if (!currentUser) return;
     
     const updatedData = {
         hometown: editHometown.value,
@@ -601,19 +600,31 @@ async function saveProfileChanges(event) {
     
     if (currentUser.type === 'alumni') {
         updatedData.profession = editProfession.value;
+    } else {
+        // NEW: Save Student Fields
+        updatedData.skills = document.getElementById('edit-skills').value;
+        updatedData.interests = document.getElementById('edit-interests').value;
     }
     
     const saveButton = document.querySelector('#profile-edit-form button');
     setLoading(saveButton, true, 'Saving...');
     
-    setTimeout(() => {
-        currentUser = { ...currentUser, ...updatedData };
-        localStorage.setItem('user', JSON.stringify(currentUser));
-        loadUserProfile();
-        updateUserAvatar();
-        showMessage('Profile updated successfully!', 'success');
-        setLoading(saveButton, false);
-    }, 1000);
+    try {
+        const response = await fetch('/api/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedData)
+        });
+        const data = await response.json();
+        if (data.success) {
+            currentUser = data.user;
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            loadUserProfile();
+            showMessage('Profile updated successfully!', 'success');
+        }
+    } catch(e) { showMessage('Error saving profile', 'error'); }
+    
+    setLoading(saveButton, false);
 }
 
 // ============================================
@@ -621,70 +632,85 @@ async function saveProfileChanges(event) {
 // ============================================
 
 /**
- * Load alumni storyboards
+ * Load alumni storyboards from Database
  */
 async function loadStoryboards() {
     if (!storyboardsContainer) return;
     
+    // NEW FIX: Show the posting form ONLY if the user is an Alumni
+    if (shareJourneySection) {
+        if (currentUser && currentUser.type === 'alumni') {
+            shareJourneySection.classList.remove('hidden');
+        } else {
+            shareJourneySection.classList.add('hidden');
+        }
+    }
+    
     storyboardsContainer.innerHTML = `
         <div class="col-span-full text-center py-8">
             <i class="fas fa-spinner fa-spin text-3xl text-indigo-500"></i>
-            <p class="mt-2">Loading inspiring stories...</p>
+            <p class="mt-2">Loading the feed...</p>
         </div>
     `;
     
-    setTimeout(() => {
-        storyboardsContainer.innerHTML = '';
-        const demoStories = [
-            {
-                name: 'Sarah Chen',
-                profession: 'AI Engineer at Google',
-                story_title: 'From Rural Roots to Silicon Valley',
-                story: 'Growing up in a small town, I never imagined working in tech. With mentorship and perseverance, I found my path.',
-                hometown: 'Rural Midwest'
-            },
-            {
-                name: 'Miguel Rodriguez',
-                profession: 'Product Manager at Microsoft',
-                story_title: 'Breaking Barriers in Tech',
-                story: 'Being a first-gen college graduate, I faced many challenges. Mentorship made all the difference.',
-                hometown: 'Texas'
-            },
-            {
-                name: 'Priya Sharma',
-                profession: 'Data Scientist at Amazon',
-                story_title: 'Finding My Voice',
-                story: 'Coming from a family with no college graduates, I doubted myself. Now I mentor others like me.',
-                hometown: 'Rural India'
-            }
-        ];
+    try {
+        const response = await fetch('/api/storyboards');
+        const data = await response.json();
         
-        demoStories.forEach(story => {
-            const storyCard = createStoryCard(story);
-            storyboardsContainer.appendChild(storyCard);
-        });
-    }, 500);
+        if (data.success && data.storyboards.length > 0) {
+            storyboardsContainer.innerHTML = '';
+            // Render each story like a feed post
+            data.storyboards.forEach(story => {
+                const storyCard = createStoryCard(story);
+                storyboardsContainer.appendChild(storyCard);
+            });
+        } else {
+            storyboardsContainer.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">No stories shared yet. Be the first to inspire!</div>';
+        }
+    } catch (error) {
+        console.error('Error loading stories:', error);
+        storyboardsContainer.innerHTML = '<div class="col-span-full text-center py-8 text-red-500">Failed to load stories. Check connection.</div>';
+    }
 }
 
 /**
- * Create story card element
+ * Create a LinkedIn-style story feed card element
  */
 function createStoryCard(story) {
     const card = document.createElement('div');
-    card.className = 'card-enhanced p-6 hover:transform hover:-translate-y-1 transition-all duration-300';
+    // Styling it more like a standalone social feed post
+    card.className = 'card-enhanced p-6 mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 w-full';
+    
+    const dateStr = story.created_at ? new Date(story.created_at).toLocaleDateString() : 'Just now';
+    const imgHtml = story.image_url ? `<img src="${story.image_url}" alt="Story Image" class="w-full h-64 object-cover rounded-lg mb-4 mt-2 border border-gray-200 dark:border-gray-700">` : '';
+
     card.innerHTML = `
-        <div class="flex items-center gap-3 mb-4">
-            <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                ${story.name.charAt(0)}
-            </div>
-            <div>
-                <h3 class="font-bold text-lg">${story.name}</h3>
-                <p class="text-sm text-gray-500">${story.profession}</p>
+        <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    ${story.name ? story.name.charAt(0) : 'A'}
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg leading-tight">${story.name}</h3>
+                    <p class="text-xs text-gray-500">${story.profession || 'Alumni'} • ${dateStr}</p>
+                </div>
             </div>
         </div>
-        <h4 class="font-semibold text-indigo-600 dark:text-indigo-400 mb-2">${story.story_title}</h4>
-        <p class="text-gray-600 dark:text-gray-300 text-sm mb-3">${story.story}</p>
-        <p class="text-xs text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i> ${story.hometown}</p>
+        <h4 class="font-bold text-indigo-600 dark:text-indigo-400 mb-2">${story.story_title}</h4>
+        <p class="text-gray-700 dark:text-gray-300 text-sm mb-4 whitespace-pre-wrap">${story.story}</p>
+        ${imgHtml}
+        
+        <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex gap-6 text-gray-500 font-semibold text-sm">
+            <button class="hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-2 rounded-lg transition flex items-center gap-2">
+                <i class="far fa-thumbs-up text-lg"></i> Inspire
+            </button>
+            <button class="hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-2 rounded-lg transition flex items-center gap-2">
+                <i class="far fa-comment text-lg"></i> Comment
+            </button>
+            <button class="hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-2 rounded-lg transition flex items-center gap-2 ml-auto">
+                <i class="fas fa-share text-lg"></i> Share
+            </button>
+        </div>
     `;
     return card;
 }
@@ -702,6 +728,7 @@ async function handleShareJourney(event) {
     
     const title = storyTitleInput.value.trim();
     const description = storyDescriptionInput.value.trim();
+    const imageUrl = storyImageUrlInput ? storyImageUrlInput.value.trim() : '';
     
     if (!title || !description) {
         showMessage('Please provide title and description', 'error');
@@ -711,12 +738,27 @@ async function handleShareJourney(event) {
     const submitButton = document.querySelector('#share-journey-form button');
     setLoading(submitButton, true, 'Publishing...');
     
-    setTimeout(() => {
-        showMessage('Your story has been shared!', 'success');
-        shareJourneyForm.reset();
-        loadStoryboards();
+    try {
+        const response = await fetch('/api/storyboards/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, description, image_url: imageUrl })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage('Your story is live!', 'success');
+            shareJourneyForm.reset();
+            loadStoryboards(); // Reloads the feed with the new post at the top
+        } else {
+            showMessage(data.message || 'Failed to post', 'error');
+        }
+    } catch (error) {
+        showMessage('Network error. Please try again.', 'error');
+    } finally {
         setLoading(submitButton, false);
-    }, 1000);
+    }
 }
 
 // ============================================
@@ -734,12 +776,13 @@ async function handleCreateSlot(event) {
         return;
     }
 
-    const date = slotDateInput.value;
-    const time = slotTimeInput.value;
-    const duration = slotDurationSelect.value;
+    const date = document.getElementById('slot-date').value;
+    const time = document.getElementById('slot-time').value;
+    const duration = document.getElementById('slot-duration').value;
+    const meetingLink = document.getElementById('slot-meeting-link').value;
 
-    if (!date || !time) {
-        showMessage('Please select both date and time', 'error');
+    if (!date || !time || !meetingLink) { 
+        showMessage('Please fill out all fields, including the meeting link', 'error');
         return;
     }
 
@@ -750,15 +793,15 @@ async function handleCreateSlot(event) {
         const response = await fetch('/api/slots/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date, time, duration })
+            body: JSON.stringify({ date, time, duration, meeting_link: meetingLink }) 
         });
 
         const data = await response.json();
 
         if (data.success) {
             showMessage('Slot created successfully!', 'success');
-            createSlotForm.reset();
-            loadMySlots(); // Refresh the list of my slots
+            document.getElementById('create-slot-form').reset();
+            loadMySlots(); // Refresh the list
         } else {
             showMessage(data.message || 'Failed to create slot', 'error');
         }
@@ -769,7 +812,6 @@ async function handleCreateSlot(event) {
         setLoading(submitButton, false);
     }
 }
-
 /**
  * Fetches real mentorship slots from MongoDB and displays them
  */
@@ -854,11 +896,26 @@ async function loadMySlots() {
                     `<p class="text-xs text-green-600 font-bold mt-1"><i class="fas fa-check-circle"></i> Booked by: ${slot.student_name || 'A Student'}</p>` : 
                     `<p class="text-xs text-gray-400 mt-1">Not booked yet</p>`;
 
+                const joinBtnHtml = slot.meeting_link ? 
+                    `<a href="${slot.meeting_link}" target="_blank" class="mt-3 inline-flex items-center bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-200 transition">
+                        <i class="fas fa-video mr-2"></i> Join GMeet
+                    </a>` : '';
+
+                // NEW: Show "Rate Session" if the student booked it and hasn't reviewed it yet
+                const reviewBtnHtml = (currentUser && currentUser.type === 'student' && slot.is_booked && !slot.is_reviewed) ? 
+                    `<button onclick="openFeedbackModal('${slot.id}')" class="mt-3 ml-2 inline-flex items-center border border-yellow-400 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition">
+                        <i class="fas fa-star mr-2"></i> Rate Session
+                    </button>` : '';
+
                 const cardHtml = `
-                    <div class="p-4 border rounded-xl bg-white dark:bg-gray-800 shadow-sm mb-3">
+                    <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mb-3">
                         <p class="font-bold">${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                         <p class="text-sm text-gray-500">${slot.duration_minutes} mins</p>
                         ${statusHtml}
+                        <div class="flex flex-wrap items-center mt-1">
+                            ${joinBtnHtml}
+                            ${reviewBtnHtml}
+                        </div>
                     </div>`;
                 mySlotsList.insertAdjacentHTML('beforeend', cardHtml);
             });
@@ -909,6 +966,9 @@ async function bookSlot(slotId, buttonElement) {
 // Resource Bank - DIRECT FILE UPLOAD VERSION
 // ============================================
 
+// NEW: Global variable to store resources for fast filtering
+let globalResources = [];
+
 async function loadResources() {
     if (!resourcesContainer) return;
     if (currentUser.type === 'alumni') alumniResourceUploadSection.classList.remove('hidden');
@@ -918,19 +978,50 @@ async function loadResources() {
         const response = await fetch('/api/resources');
         const data = await response.json();
         if (data.success) {
-            resourcesContainer.innerHTML = data.resources.map(res => `
-                <div class="card-enhanced p-5 animate-fade-in">
-                    <i class="fas fa-file-pdf text-indigo-500 text-2xl"></i>
-                    <h3 class="font-bold mt-2">${res.title}</h3>
-                    <p class="text-xs text-gray-400 mb-2">${res.category}</p>
-                    <a href="${res.url}" target="_blank" class="btn-primary-gradient inline-block px-4 py-2 rounded-lg text-white text-xs text-center w-full">
-                        <i class="fas fa-download mr-1"></i> Download
-                    </a>
-                </div>
-            `).join('');
+            globalResources = data.resources; // Save to global variable
+            renderResources(globalResources); // Render all initially
         }
     } catch (error) { console.error(error); }
 }
+
+// NEW: Function to render the HTML cards
+function renderResources(resourcesArray) {
+    if (resourcesArray.length === 0) {
+        resourcesContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No resources found.</p>';
+        return;
+    }
+    
+    resourcesContainer.innerHTML = resourcesArray.map(res => `
+        <div class="card-enhanced p-5 animate-fade-in border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+            <div class="flex justify-between items-start mb-2">
+                <i class="fas fa-file-pdf text-indigo-500 text-3xl"></i>
+                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded dark:bg-indigo-900 dark:text-indigo-300 border border-indigo-400">
+                    ${res.category}
+                </span>
+            </div>
+            <h3 class="font-bold mt-2 text-lg leading-tight mb-1">${res.title}</h3>
+            <p class="text-xs text-gray-500 mb-3">Shared by ${res.alumni_name}</p>
+            <a href="${res.url}" target="_blank" class="btn-primary-gradient inline-block px-4 py-2 rounded-lg text-white text-sm font-semibold text-center w-full hover:shadow-lg transition">
+                <i class="fas fa-download mr-1"></i> Download
+            </a>
+        </div>
+    `).join('');
+}
+
+// NEW: Function triggered when you type in the search bar or change the dropdown
+window.filterResources = function() {
+    const searchTerm = document.getElementById('resource-search-input').value.toLowerCase();
+    const selectedCategory = document.getElementById('resource-filter-select').value;
+
+    const filtered = globalResources.filter(res => {
+        const matchesSearch = res.title.toLowerCase().includes(searchTerm) || res.description?.toLowerCase().includes(searchTerm);
+        const matchesCategory = selectedCategory === 'All' || res.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+    });
+
+    renderResources(filtered);
+};
+
 
 async function handleResourceUpload(event) {
     event.preventDefault();
@@ -1184,6 +1275,77 @@ function setupEventListeners() {
     if (confidencePostForm) confidencePostForm.addEventListener('submit', handleConfidencePost);
 }
 
+// ============================================
+// Phase 2: Alumni Search & Feedback System
+// ============================================
+
+async function loadAlumniDirectory() {
+    const container = document.getElementById('alumni-directory-results');
+    const searchTerm = document.getElementById('alumni-search-input')?.value || '';
+    
+    if (!container) return;
+    container.innerHTML = '<div class="col-span-full text-center py-4"><i class="fas fa-spinner fa-spin text-indigo-500"></i> Searching...</div>';
+    
+    try {
+        const response = await fetch(`/api/alumni?search=${encodeURIComponent(searchTerm)}`);
+        const data = await response.json();
+        
+        if (data.success && data.alumni.length > 0) {
+            container.innerHTML = data.alumni.map(al => `
+                <div class="p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                        ${al.name.charAt(0)}
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-indigo-600 dark:text-indigo-400">${al.name}</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">${al.profession || 'Alumni Member'}</p>
+                        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-map-marker-alt"></i> ${al.hometown || 'Unknown Location'}</p>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p class="col-span-full text-center text-gray-500 py-4">No mentors found matching that search.</p>';
+        }
+    } catch (e) { console.error(e); }
+}
+
+function openFeedbackModal(slotId) {
+    document.getElementById('feedback-slot-id').value = slotId;
+    document.getElementById('feedback-modal').classList.remove('hidden');
+}
+
+function closeFeedbackModal() {
+    document.getElementById('feedback-modal').classList.add('hidden');
+    document.getElementById('feedback-form').reset();
+}
+
+async function submitFeedback(event) {
+    event.preventDefault();
+    const slotId = document.getElementById('feedback-slot-id').value;
+    const rating = document.getElementById('feedback-rating').value;
+    const review = document.getElementById('feedback-review').value;
+    const btn = event.target.querySelector('button[type="submit"]');
+    
+    setLoading(btn, true, 'Submitting...');
+    
+    try {
+        const res = await fetch(`/api/feedback/${slotId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ rating, review })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showMessage('Rating submitted! Thank you.', 'success');
+            closeFeedbackModal();
+            loadMySlots(); // Refresh slots so the button disappears
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (e) { showMessage('Error submitting rating', 'error'); }
+    
+    setLoading(btn, false);
+}
 // Export functions for global access
 window.showPage = showPage;
 window.handleLogout = handleLogout;
@@ -1192,6 +1354,12 @@ window.connectWithMatch = connectWithMatch;
 window.bookSlot = bookSlot;
 window.deletePost = deletePost;
 window.showMessage = showMessage;
+
+// NEW EXPORTS FOR PHASE 2:
+window.loadAlumniDirectory = loadAlumniDirectory;
+window.openFeedbackModal = openFeedbackModal;
+window.closeFeedbackModal = closeFeedbackModal;
+window.submitFeedback = submitFeedback;
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', init);
