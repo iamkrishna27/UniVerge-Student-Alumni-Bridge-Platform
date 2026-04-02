@@ -866,5 +866,60 @@
 </div>
     <!-- JavaScript -->
     <script src="/script/script.js"></script>
+    <div id="reportModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl transform transition-all animate-fade-up">
+        <div class="flex items-center gap-2 mb-4 text-red-500">
+            <i class="fas fa-flag text-xl"></i>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Report Content</h3>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Help us keep UniVerge safe. Please tell us why you are reporting this.</p>
+        
+        <input type="hidden" id="report-target-user-id">
+        <input type="hidden" id="report-content-id">
+        <input type="hidden" id="report-content-type">
+        
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-2 dark:text-gray-300">Reason</label>
+            <select id="report-reason" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <option value="Spam">Spam / Promotional</option>
+                <option value="Inappropriate">Inappropriate Behavior or Language</option>
+                <option value="Harassment">Harassment or Bullying</option>
+                <option value="Fake">Fake Profile</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        
+        <div class="mb-6">
+            <label class="block text-sm font-medium mb-2 dark:text-gray-300">Additional Details</label>
+            <textarea id="report-details" rows="3" placeholder="Briefly explain what happened..." class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+        </div>
+        
+        <div class="flex gap-3">
+            <button onclick="closeReportModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300 transition">Cancel</button>
+            <button onclick="submitReportRequest()" class="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-semibold transition shadow-md">Submit Report</button>
+        </div>
+    </div>
+</div>
+<div id="editStoryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+        <h3 class="text-xl font-bold mb-4 dark:text-white">Edit Story</h3>
+        
+        <input type="hidden" id="edit-story-id">
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-2 dark:text-gray-300">Title</label>
+            <input type="text" id="edit-story-title" class="w-full px-4 py-3 border border-gray-300 rounded-xl dark:bg-gray-700 dark:text-white">
+        </div>
+        <div class="mb-6">
+            <label class="block text-sm font-medium mb-2 dark:text-gray-300">Story</label>
+            <textarea id="edit-story-desc" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
+        </div>
+        
+        <div class="flex gap-3">
+            <button onclick="closeEditModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-xl font-semibold dark:text-gray-300">Cancel</button>
+            <button onclick="submitStoryEdit()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-semibold">Save Changes</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

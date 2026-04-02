@@ -29,6 +29,7 @@ users_collection = None
 mentorship_slots_collection = None
 resources_collection = None
 confidence_corner_posts_collection = None
+reports_collection = None  # 1. Make sure it's declared here
 
 try:
     client = MongoClient(DATABASE_URL)
@@ -39,11 +40,13 @@ try:
     resources_collection = db.resources
     confidence_corner_posts_collection = db.confidence_corner_posts
     
+    # 2. THIS IS THE MISSING LINE! Connect it to the database:
+    reports_collection = db.reports 
+    
     users_collection.create_index("email", unique=True)
     print(f"Successfully connected to MongoDB: {DB_NAME}")
 except Exception as e:
     print(f"Error connecting to MongoDB: {e}")
-
 # --- Global current_user (for session simulation) ---
 current_user = None
 
@@ -307,6 +310,8 @@ def search_alumni():
     alumni_list = list(users_collection.find({"type": "alumni"}))
     
     results = []
+    now = datetime.now()
+    
     for al in alumni_list:
         name = al.get('name', '').lower()
         prof = (al.get('profession') or '').lower()
@@ -314,6 +319,15 @@ def search_alumni():
         if search_term in name or search_term in prof:
             al_dict = doc_to_dict(al)
             al_dict.pop('password', None)
+            
+            # Check if they pinged the server in the last 5 minutes (300 seconds)
+            last_active = al.get('last_active')
+            is_online = False
+            if last_active and isinstance(last_active, datetime):
+                if (now - last_active).total_seconds() < 300:
+                    is_online = True
+                    
+            al_dict['is_online'] = is_online
             results.append(al_dict)
 
     return jsonify({"alumni": results, "success": True}), 200
@@ -344,6 +358,82 @@ def serve_impact_tracker_dummy_content():
     file_path = os.path.join(app.root_path, app.template_folder, 'impact_tracker_dummy.html')
     with open(file_path, 'r', encoding='utf-8') as f:
         return re.search(r'<main[^>]*>(.*?)</main>', f.read(), re.DOTALL).group(1)
+
+# --- Phase 3: Moderation & Reporting ---
+
+@app.route('/api/reports', methods=['POST'])
+def submit_report():
+    global current_user
+    if not current_user:
+        return jsonify({"success": False, "message": "You must be logged in to submit a report."}), 401
+
+    data = request.get_json()
+    
+    new_report = {
+        "reporter_id": ObjectId(current_user['id']),
+        "reporter_name": current_user['name'],
+        # Use ObjectId if a valid ID is passed, otherwise None
+        "reported_user_id": ObjectId(data.get('reported_user_id')) if data.get('reported_user_id') else None,
+        "content_id": ObjectId(data.get('content_id')) if data.get('content_id') else None,
+        "content_type": data.get('content_type', 'general'), # e.g., 'post', 'profile', 'message'
+        "reason": data.get('reason'),
+        "details": data.get('details', ''),
+        "status": "pending",
+        "created_at": datetime.now()
+    }
+    
+    try:
+        reports_collection.insert_one(new_report)
+        return jsonify({"success": True, "message": "Report submitted successfully. Our team will review it."}), 201
+    except Exception as e:
+        print(f"Report Error: {e}")
+        return jsonify({"success": False, "message": "An error occurred while submitting the report."}), 500
+    
+# ==========================================
+# NEW FEATURES: Edit/Delete, Ping, & Status
+# ==========================================
+
+# 1. Edit a Story
+@app.route('/api/storyboards/<story_id>', methods=['PUT'])
+def edit_story(story_id):
+    global current_user
+    if not current_user or current_user['type'] != 'alumni':
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        
+    data = request.get_json()
+    result = db.stories.update_one(
+        {"_id": ObjectId(story_id), "alumni_id": ObjectId(current_user['id'])},
+        {"$set": {"story_title": data.get('title'), "story": data.get('description')}}
+    )
+    
+    if result.modified_count > 0:
+        return jsonify({"success": True, "message": "Story updated!"})
+    return jsonify({"success": False, "message": "Story not found or unauthorized."}), 404
+
+# 2. Delete a Story
+@app.route('/api/storyboards/<story_id>', methods=['DELETE'])
+def delete_story(story_id):
+    global current_user
+    if not current_user or current_user['type'] != 'alumni':
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        
+    result = db.stories.delete_one({"_id": ObjectId(story_id), "alumni_id": ObjectId(current_user['id'])})
+    if result.deleted_count > 0:
+        return jsonify({"success": True, "message": "Story deleted!"})
+    return jsonify({"success": False, "message": "Story not found or unauthorized."}), 404
+
+# 3. User "Heartbeat" (Ping) to track Online Status
+@app.route('/api/ping', methods=['POST'])
+def ping():
+    global current_user
+    if current_user:
+        # Update their last active time in the database
+        users_collection.update_one(
+            {"_id": ObjectId(current_user['id'])}, 
+            {"$set": {"last_active": datetime.now()}}
+        )
+    return jsonify({"success": True})
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

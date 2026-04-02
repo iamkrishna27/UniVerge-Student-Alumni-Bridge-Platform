@@ -678,12 +678,29 @@ async function loadStoryboards() {
  */
 function createStoryCard(story) {
     const card = document.createElement('div');
-    // Styling it more like a standalone social feed post
     card.className = 'card-enhanced p-6 mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 w-full';
     
     const dateStr = story.created_at ? new Date(story.created_at).toLocaleDateString() : 'Just now';
     const imgHtml = story.image_url ? `<img src="${story.image_url}" alt="Story Image" class="w-full h-64 object-cover rounded-lg mb-4 mt-2 border border-gray-200 dark:border-gray-700">` : '';
 
+    // Safely prepare strings for the onclick functions to prevent errors with quotes
+    const safeTitle = story.story_title ? story.story_title.replace(/'/g, "\\'") : '';
+    const safeDesc = story.story ? story.story.replace(/'/g, "\\'") : '';
+
+    // 1. Generate the Edit/Delete buttons ONLY if it's the author's post
+    let adminButtons = '';
+    if (currentUser && currentUser.id === story.alumni_id) {
+        adminButtons = `
+            <button onclick="openEditModal('${story.id}', '${safeTitle}', '${safeDesc}')" class="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-3 py-2 rounded-lg transition flex items-center gap-2">
+                <i class="fas fa-edit text-lg"></i> Edit
+            </button>
+            <button onclick="deleteStoryRequest('${story.id}')" class="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 px-3 py-2 rounded-lg transition flex items-center gap-2">
+                <i class="fas fa-trash text-lg"></i> Delete
+            </button>
+        `;
+    }
+
+    // 2. Build the full card HTML
     card.innerHTML = `
         <div class="flex justify-between items-start mb-4">
             <div class="flex items-center gap-3">
@@ -696,25 +713,33 @@ function createStoryCard(story) {
                 </div>
             </div>
         </div>
+        
         <h4 class="font-bold text-indigo-600 dark:text-indigo-400 mb-2">${story.story_title}</h4>
         <p class="text-gray-700 dark:text-gray-300 text-sm mb-4 whitespace-pre-wrap">${story.story}</p>
         ${imgHtml}
         
-        <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex gap-6 text-gray-500 font-semibold text-sm">
+        <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 text-gray-500 font-semibold text-sm items-center">
+            
             <button class="hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-2 rounded-lg transition flex items-center gap-2">
                 <i class="far fa-thumbs-up text-lg"></i> Inspire
             </button>
             <button class="hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-2 rounded-lg transition flex items-center gap-2">
                 <i class="far fa-comment text-lg"></i> Comment
             </button>
-            <button class="hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-2 rounded-lg transition flex items-center gap-2 ml-auto">
-                <i class="fas fa-share text-lg"></i> Share
+            
+            <div class="flex-grow"></div>
+
+            ${adminButtons}
+            
+            <button onclick="openReportModal('${story.alumni_id}', 'story', '${story.id}')" class="text-gray-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 px-3 py-2 rounded-lg transition flex items-center gap-2">
+                <i class="fas fa-flag text-lg"></i> Report
             </button>
+            
         </div>
     `;
+    
     return card;
 }
-
 /**
  * Handle sharing a journey (alumni only)
  */
@@ -1082,12 +1107,18 @@ async function loadConfidencePosts() {
             data.posts.forEach(post => {
                 const date = new Date(post.created_at).toLocaleDateString();
                 const postCard = document.createElement('div');
-                postCard.className = 'card-enhanced p-5 animate-fade-in mb-4';
+                postCard.className = 'card-enhanced p-5 animate-fade-in mb-4 relative';
                 postCard.innerHTML = `
-                    <p class="text-gray-700 dark:text-gray-300">"${post.content}"</p>
-                    <div class="flex justify-between items-center mt-3">
+                    <p class="text-gray-700 dark:text-gray-300 pr-8">"${post.content}"</p>
+                    <div class="flex justify-between items-center mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                         <span class="text-sm text-gray-500"><i class="fas fa-user-secret mr-1"></i> Anonymous</span>
-                        <span class="text-xs text-gray-400">${date}</span>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-gray-400">${date}</span>
+                            
+                            <button onclick="openReportModal('${post.user_id}', 'post', '${post.id}')" class="text-xs text-red-500 hover:text-red-700 flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+                                <i class="fas fa-flag"></i> Report
+                            </button>
+                        </div>
                     </div>
                 `;
                 confidencePostsContainer.appendChild(postCard);
@@ -1212,6 +1243,49 @@ function initDarkMode() {
     }
 }
 
+// ==========================================
+// BACKGROUND TASKS (Online Status & Reminders)
+// ==========================================
+
+// Ping server every 1 minute to show we are online
+setInterval(() => {
+    if (currentUser) {
+        fetch('/api/ping', { method: 'POST' }).catch(e => console.log("Ping failed"));
+    }
+}, 60000);
+
+// Check for upcoming sessions every 5 minutes
+let notifiedSessions = [];
+setInterval(() => {
+    if (!currentUser || !mySlotsList) return;
+    
+    // Check the HTML of your slots for start times (simplest approach for your current UI)
+    const cards = mySlotsList.querySelectorAll('.border-gray-200');
+    cards.forEach(card => {
+        const timeText = card.querySelector('.font-bold').innerText; // e.g. "4/2/2026 at 03:00 PM"
+        const slotTime = new Date(timeText);
+        const now = new Date();
+        
+        // Calculate minutes difference
+        const diffMs = slotTime - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        
+        // If session is in less than 15 minutes and we haven't notified yet
+        if (diffMins > 0 && diffMins <= 15 && !notifiedSessions.includes(timeText)) {
+            notifiedSessions.push(timeText);
+            // Trigger browser notification or your in-app toast
+            showMessage(`Reminder: You have a mentorship session in ${diffMins} minutes!`, 'warning');
+            
+            // Optional: System notification if browser allows
+            if (Notification.permission === "granted") {
+                new Notification("UniVerge Session Reminder", { body: `Session starts in ${diffMins} minutes.` });
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+        }
+    });
+}, 300000); // Check every 5 mins
+
 // ============================================
 // Initialization
 // ============================================
@@ -1296,11 +1370,18 @@ async function loadAlumniDirectory() {
                     <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
                         ${al.name.charAt(0)}
                     </div>
-                    <div>
-                        <h4 class="font-bold text-indigo-600 dark:text-indigo-400">${al.name}</h4>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+    ${al.name} 
+    ${al.is_online ? '<span class="w-3 h-3 bg-green-500 rounded-full" title="Online Now"></span>' : '<span class="w-3 h-3 bg-gray-300 rounded-full" title="Offline"></span>'}
+</h4>
                         <p class="text-sm text-gray-600 dark:text-gray-300">${al.profession || 'Alumni Member'}</p>
                         <p class="text-xs text-gray-500 mt-1"><i class="fas fa-map-marker-alt"></i> ${al.hometown || 'Unknown Location'}</p>
                     </div>
+                    
+                    <button onclick="openReportModal('${al.id}', 'profile', '')" class="text-red-500 hover:text-white hover:bg-red-500 border border-red-500 transition-colors px-3 py-1 rounded-lg text-xs font-semibold flex flex-col items-center justify-center">
+                        <i class="fas fa-flag"></i> Report
+                    </button>
                 </div>
             `).join('');
         } else {
@@ -1346,6 +1427,62 @@ async function submitFeedback(event) {
     
     setLoading(btn, false);
 }
+
+
+// ==========================================
+// EDIT / DELETE STORIES
+// ==========================================
+
+async function deleteStoryRequest(storyId) {
+    if (!confirm("Are you sure you want to delete this story?")) return;
+    
+    try {
+        const response = await fetch(`/api/storyboards/${storyId}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.success) {
+            showMessage("Story deleted", "success");
+            loadStoryboards(); // Refresh feed
+        } else alert(data.message);
+    } catch(e) { console.error(e); }
+}
+
+function openEditModal(storyId, title, desc) {
+    document.getElementById('edit-story-id').value = storyId;
+    document.getElementById('edit-story-title').value = title;
+    document.getElementById('edit-story-desc').value = desc;
+    document.getElementById('editStoryModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('editStoryModal').style.display = 'none';
+}
+
+async function submitStoryEdit() {
+    const id = document.getElementById('edit-story-id').value;
+    const title = document.getElementById('edit-story-title').value;
+    const desc = document.getElementById('edit-story-desc').value;
+    
+    try {
+        const response = await fetch(`/api/storyboards/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ title: title, description: desc })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showMessage("Story updated!", "success");
+            closeEditModal();
+            loadStoryboards(); // Refresh feed
+        }
+    } catch(e) { console.error(e); }
+}
+
+// Don't forget to add these to the bottom of your script.js exports!
+window.deleteStoryRequest = deleteStoryRequest;
+window.openEditModal = openEditModal;
+window.closeEditModal = closeEditModal;
+window.submitStoryEdit = submitStoryEdit;
+
 // Export functions for global access
 window.showPage = showPage;
 window.handleLogout = handleLogout;
@@ -1361,5 +1498,65 @@ window.openFeedbackModal = openFeedbackModal;
 window.closeFeedbackModal = closeFeedbackModal;
 window.submitFeedback = submitFeedback;
 
+window.openReportModal = openReportModal;
+window.closeReportModal = closeReportModal;
+window.submitReportRequest = submitReportRequest;
+
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', init);
+// --- Reporting & Moderation Logic ---
+
+function openReportModal(reportedUserId, contentType, contentId) {
+    // Populate hidden fields with the specific context
+    document.getElementById('report-target-user-id').value = reportedUserId || '';
+    document.getElementById('report-content-type').value = contentType || 'general';
+    document.getElementById('report-content-id').value = contentId || '';
+    
+    // Clear previous text
+    document.getElementById('report-details').value = '';
+    
+    // Show the modal
+    document.getElementById('reportModal').style.display = 'flex';
+}
+
+function closeReportModal() {
+    document.getElementById('reportModal').style.display = 'none';
+}
+
+async function submitReportRequest() {
+    const reportedUserId = document.getElementById('report-target-user-id').value;
+    const contentType = document.getElementById('report-content-type').value;
+    const contentId = document.getElementById('report-content-id').value;
+    const reason = document.getElementById('report-reason').value;
+    const details = document.getElementById('report-details').value;
+
+    const reportData = {
+        reported_user_id: reportedUserId,
+        content_type: contentType,
+        content_id: contentId,
+        reason: reason,
+        details: details
+    };
+
+    try {
+        const response = await fetch('/api/reports', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(reportData)
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            closeReportModal();
+        } else {
+            alert(data.message || "Failed to submit report.");
+        }
+    } catch (error) {
+        console.error("Error submitting report:", error);
+        alert("An error occurred. Please try again.");
+    }
+}
