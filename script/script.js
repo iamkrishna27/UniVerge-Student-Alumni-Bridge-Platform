@@ -11,13 +11,15 @@
 const messageArea = document.getElementById('message-area');
 const navAuthButton = document.getElementById('nav-auth');
 const navLogoutButton = document.getElementById('nav-logout');
+const navHomeButton = document.getElementById('nav-home');
 const navDashboardButton = document.getElementById('nav-dashboard');
 const navProfileButton = document.getElementById('nav-profile');
 const navStoryboardButton = document.getElementById('nav-storyboard');
-const navImpactTrackerButton = document.getElementById('nav-impact-tracker');
+const navJobBoardButton = document.getElementById('nav-job-board');
 const navQuickConnectButton = document.getElementById('nav-quick-connect');
 const navResourceBankButton = document.getElementById('nav-resource-bank');
 const navConfidenceCornerButton = document.getElementById('nav-confidence-corner');
+const navChatButton = document.getElementById('nav-chat');
 
 // Pages
 const landingPage = document.getElementById('landing-page');
@@ -25,17 +27,19 @@ const authPage = document.getElementById('auth-page');
 const dashboardPage = document.getElementById('dashboard-page');
 const profilePage = document.getElementById('profile-page');
 const storyboardPage = document.getElementById('storyboard-page');
-const impactTrackerPage = document.getElementById('impact-tracker-page');
+const jobBoardPage = document.getElementById('job-board-page');
 const quickConnectPage = document.getElementById('quick-connect-page');
 const resourceBankPage = document.getElementById('resource-bank-page');
 const confidenceCornerPage = document.getElementById('confidence-corner-page');
+const chatPage = document.getElementById('chat-page');
 
 // Auth Elements
 const authTitle = document.getElementById('auth-title');
 const authForm = document.getElementById('auth-form');
 const authEmail = document.getElementById('auth-email');
 const authPassword = document.getElementById('auth-password');
-const authName = document.getElementById('auth-name');
+const authFirstName = document.getElementById('auth-firstname');
+const authLastName = document.getElementById('auth-lastname');
 const authUserType = document.getElementById('auth-userType');
 const authHometown = document.getElementById('auth-hometown');
 const authLanguage = document.getElementById('auth-language');
@@ -51,6 +55,9 @@ const editHometown = document.getElementById('edit-hometown');
 const editLanguage = document.getElementById('edit-language');
 const editProfession = document.getElementById('edit-profession');
 const editProfessionRow = document.getElementById('edit-profession-row');
+const profilePhotoImg = document.getElementById('profile-photo-img');
+const profilePhotoInput = document.getElementById('profile-photo-input');
+const removePhotoBtn = document.getElementById('remove-photo-btn');
 const profileEditForm = document.getElementById('profile-edit-form');
 
 // Dashboard Elements
@@ -107,21 +114,21 @@ let currentUser = null;
 function showMessage(message, type = 'info') {
     const messageDiv = document.createElement('div');
     messageDiv.className = `fixed top-20 right-4 left-4 md:left-auto z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300`;
-    
+
     const icons = {
         success: 'fa-check-circle',
         error: 'fa-exclamation-circle',
         info: 'fa-info-circle',
         warning: 'fa-exclamation-triangle'
     };
-    
+
     const bgColors = {
         success: 'bg-green-500',
         error: 'bg-red-500',
         info: 'bg-indigo-500',
         warning: 'bg-yellow-500'
     };
-    
+
     messageDiv.className += ` ${bgColors[type]} text-white`;
     messageDiv.style.maxWidth = window.innerWidth < 640 ? 'calc(100% - 2rem)' : '400px';
     messageDiv.style.right = window.innerWidth < 640 ? '1rem' : '1rem';
@@ -131,15 +138,15 @@ function showMessage(message, type = 'info') {
             <span>${message}</span>
         </div>
     `;
-    
+
     document.body.appendChild(messageDiv);
-    
+
     // Animate in
     setTimeout(() => {
         messageDiv.style.transform = 'translateX(0)';
         messageDiv.style.opacity = '1';
     }, 10);
-    
+
     // Auto-remove after 3 seconds
     setTimeout(() => {
         messageDiv.style.opacity = '0';
@@ -153,7 +160,7 @@ function showMessage(message, type = 'info') {
  */
 function setLoading(element, isLoading, loadingText = 'Loading...') {
     if (!element) return;
-    
+
     if (isLoading) {
         element.disabled = true;
         element.classList.add('opacity-50', 'cursor-not-allowed');
@@ -193,9 +200,17 @@ function getUserInitials(user) {
  * Update user avatar display
  */
 function updateUserAvatar() {
-    if (userAvatar && currentUser) {
+    if (!userAvatar || !currentUser) return;
+
+    if (currentUser.profile_image) {
+        userAvatar.style.backgroundImage = `url(${currentUser.profile_image})`;
+        userAvatar.style.backgroundSize = 'cover';
+        userAvatar.style.backgroundPosition = 'center';
+        userAvatar.textContent = '';
+    } else {
+        userAvatar.style.backgroundImage = '';
         const initials = getUserInitials(currentUser);
-        userAvatar.innerHTML = initials;
+        userAvatar.textContent = initials;
         userAvatar.style.display = 'flex';
         userAvatar.style.alignItems = 'center';
         userAvatar.style.justifyContent = 'center';
@@ -210,39 +225,45 @@ function updateUserAvatar() {
  * Show specific page and update navigation
  */
 function showPage(pageId, requireAuth = true) {
+    // Redirect landing or auth pages to dashboard when already logged in
+    if (currentUser && (pageId === 'landing' || pageId === 'auth')) {
+        showPage('dashboard');
+        return;
+    }
+
     // Check authentication if required
     if (requireAuth && !localStorage.getItem('user') && !currentUser) {
         showMessage('Please login to access this page', 'warning');
         showPage('auth', false);
         return;
     }
-    
+
     // Hide all pages
     const pages = [
-        landingPage, authPage, dashboardPage, profilePage, 
-        storyboardPage, impactTrackerPage, quickConnectPage, 
-        resourceBankPage, confidenceCornerPage
+        landingPage, authPage, dashboardPage, profilePage,
+        storyboardPage, jobBoardPage, quickConnectPage,
+        resourceBankPage, confidenceCornerPage, chatPage
     ];
-    
+
     pages.forEach(page => {
         if (page) {
             page.classList.add('hidden');
             page.classList.remove('active-page');
         }
     });
-    
+
     // Show target page
     const targetPage = document.getElementById(`${pageId}-page`);
     if (targetPage) {
         targetPage.classList.remove('hidden');
-        
+
         // Small delay to ensure CSS transitions apply smoothly
         setTimeout(() => {
             targetPage.classList.add('active-page', 'animate-fade-up');
         }, 10);
-        
+
         // Load page-specific data explicitly when page is opened
-        switch(pageId) {
+        switch (pageId) {
             case 'dashboard':
                 loadDashboardData();
                 break;
@@ -252,8 +273,8 @@ function showPage(pageId, requireAuth = true) {
             case 'storyboard':
                 loadStoryboards();
                 break;
-            case 'impact-tracker':
-                loadImpactTracker();
+            case 'job-board':
+                loadJobs();
                 break;
             case 'quick-connect':
                 loadQuickConnect();
@@ -264,12 +285,39 @@ function showPage(pageId, requireAuth = true) {
             case 'confidence-corner':
                 loadConfidencePosts();
                 break;
+            case 'chat':
+                const chatParams = new URLSearchParams(window.location.search);
+                const chatConnection = chatParams.get('connection');
+                if (typeof loadConversations === 'function') {
+                    loadConversations(chatConnection);
+                }
+                break;
         }
     }
-    
+
     // Update active nav link
     updateActiveNavLink(pageId);
-    
+
+    // Update browser URL for landing/dashboard where appropriate
+    if (pageId === 'dashboard' && currentUser) {
+        const targetPath = currentUser.type === 'student' ? '/student/dashboard' : '/alumni/dashboard';
+        if (window.location.pathname !== targetPath) {
+            history.replaceState(null, '', targetPath);
+        }
+    } else if (pageId === 'landing') {
+        if (window.location.pathname !== '/') {
+            history.replaceState(null, '', '/');
+        }
+    } else if (pageId === 'auth') {
+        if (window.location.pathname !== '/auth') {
+            history.replaceState(null, '', '/auth');
+        }
+    } else if (pageId === 'chat') {
+        if (window.location.pathname !== '/chat') {
+            history.replaceState(null, '', '/chat' + window.location.search);
+        }
+    }
+
     // Clear messages
     if (messageArea) messageArea.innerHTML = '';
 }
@@ -283,7 +331,7 @@ function updateActiveNavLink(pageId) {
         link.classList.remove('active', 'text-indigo-600', 'font-semibold');
         link.classList.add('text-gray-700', 'dark:text-gray-200');
     });
-    
+
     const activeLink = document.querySelector(`[onclick*="showPage('${pageId}')"]`);
     if (activeLink) {
         activeLink.classList.add('active', 'text-indigo-600', 'dark:text-indigo-400', 'font-semibold');
@@ -300,7 +348,7 @@ function updateActiveNavLink(pageId) {
  */
 function toggleAuthMode() {
     isRegisterMode = !isRegisterMode;
-    
+
     if (isRegisterMode) {
         authTitle.textContent = 'Create Account';
         authSubmitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i> Register';
@@ -320,44 +368,46 @@ function toggleAuthMode() {
  */
 async function handleAuthSubmit(event) {
     event.preventDefault();
-    
+
     const email = authEmail.value;
     const password = authPassword.value;
-    
+
     if (!email || !password) {
         showMessage('Please fill in all required fields', 'error');
         return;
     }
-    
+
     setLoading(authSubmitBtn, true);
-    
+
     let url = isRegisterMode ? '/api/register' : '/api/login';
     let body = { email, password };
-    
+
     if (isRegisterMode) {
-        const name = authName.value;
+        const firstName = authFirstName.value;
+        const lastName = authLastName.value;
+        const name = `${firstName} ${lastName}`.trim();
         const userType = authUserType.value;
         const hometown = authHometown.value;
         const language = authLanguage.value;
-        
-        if (!name || !userType || !hometown || !language) {
+
+        if (!firstName || !lastName || !userType || !hometown || !language) {
             showMessage('Please fill in all registration fields', 'error');
             setLoading(authSubmitBtn, false);
             return;
         }
-        
+
         body = { ...body, name, type: userType, hometown, language };
     }
-    
+
     try {
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             currentUser = data.user;
             localStorage.setItem('user', JSON.stringify(currentUser));
@@ -402,7 +452,7 @@ async function handleLogout() {
     try {
         const response = await fetch('/api/logout', { method: 'POST' });
         const data = await response.json();
-        
+
         if (data.success) {
             localStorage.removeItem('user');
             currentUser = null;
@@ -427,18 +477,20 @@ async function handleLogout() {
  */
 function updateNavUI(user) {
     const isLoggedIn = !!user;
-    
+
     // Toggle visibility of auth/logout buttons
     if (navAuthButton) navAuthButton.classList.toggle('hidden', isLoggedIn);
     if (navLogoutButton) navLogoutButton.classList.toggle('hidden', !isLoggedIn);
-    
+
     // Toggle visibility of protected pages
     const protectedNavs = [
         navDashboardButton, navProfileButton, navStoryboardButton,
-        navImpactTrackerButton, navQuickConnectButton, navResourceBankButton,
-        navConfidenceCornerButton
+        navJobBoardButton, navQuickConnectButton, navResourceBankButton,
+        navConfidenceCornerButton, navChatButton
     ];
-    
+
+    if (navHomeButton) navHomeButton.classList.toggle('hidden', isLoggedIn);
+
     protectedNavs.forEach(nav => {
         if (nav) nav.classList.toggle('hidden', !isLoggedIn);
     });
@@ -455,11 +507,11 @@ async function getCurrentUser() {
         updateUserAvatar();
         return currentUser;
     }
-    
+
     try {
         const response = await fetch('/api/current_user');
         const data = await response.json();
-        
+
         if (data.success && data.user) {
             currentUser = data.user;
             localStorage.setItem('user', JSON.stringify(currentUser));
@@ -487,11 +539,11 @@ async function getCurrentUser() {
  */
 function loadDashboardData() {
     if (!currentUser) return;
-    
+
     if (dashboardWelcome) {
         dashboardWelcome.innerHTML = `Welcome back, ${currentUser.name}! <i class="fas fa-hand-peace"></i>`;
     }
-    
+
     const isStudent = currentUser.type === 'student';
     if (studentMatchingSection) {
         studentMatchingSection.classList.toggle('hidden', !isStudent);
@@ -504,6 +556,127 @@ function loadDashboardData() {
     if (isStudent) {
         loadAlumniDirectory();
     }
+
+    // Dashboard widgets for alumni and students
+    loadRecentActivity();
+    loadUpcomingSessions();
+}
+
+/**
+ * Load recent activity cards on alumni dashboard
+ */
+async function loadRecentActivity() {
+    const container = document.getElementById('recentActivityList');
+    if (!container || !currentUser || currentUser.type !== 'alumni') return;
+
+    container.innerHTML = '<p class="text-gray-500 text-sm">Loading recent activity...</p>';
+
+    try {
+        const response = await fetch('/api/dashboard/recent-activity');
+        const data = await response.json();
+
+        if (!data.success) {
+            container.innerHTML = `<p class="text-red-500 text-sm">${data.message || 'Unable to load recent activity.'}</p>`;
+            return;
+        }
+
+        const activities = data.recent_activity || [];
+        if (activities.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm">No recent activity found.</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+
+        activities.forEach(item => {
+            let icon = 'fas fa-info-circle';
+            let iconBg = 'bg-gray-100 text-gray-600';
+            switch (item.type) {
+                case 'mentorship_request':
+                    icon = 'fas fa-user-plus';
+                    iconBg = 'bg-yellow-100 text-yellow-600';
+                    break;
+                case 'task_completed':
+                    icon = 'fas fa-check-circle';
+                    iconBg = 'bg-green-100 text-green-600';
+                    break;
+                case 'mentorship_connection':
+                    icon = 'fas fa-user-check';
+                    iconBg = 'bg-blue-100 text-blue-600';
+                    break;
+                case 'job_application':
+                    icon = 'fas fa-briefcase';
+                    iconBg = 'bg-purple-100 text-purple-600';
+                    break;
+                default:
+                    icon = 'fas fa-info-circle';
+            }
+
+            const itemHtml = `
+                <div class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center ${iconBg}">
+                        <i class="${icon}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-sm">${item.message}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">${item.time}</p>
+                    </div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', itemHtml);
+        });
+
+    } catch (error) {
+        console.error('loadRecentActivity error:', error);
+        container.innerHTML = '<p class="text-red-500 text-sm">Failed to load recent activity.</p>';
+    }
+}
+
+/**
+ * Load upcoming mentorship sessions for alumni dashboard
+ */
+async function loadUpcomingSessions() {
+    const container = document.getElementById('upcomingSessionsList');
+    if (!container || !currentUser || currentUser.type !== 'alumni') return;
+
+    container.innerHTML = '<p class="text-gray-500 text-sm">Loading upcoming sessions...</p>';
+
+    try {
+        const response = await fetch('/api/dashboard/upcoming-sessions');
+        const data = await response.json();
+
+        if (!data.success) {
+            container.innerHTML = `<p class="text-red-500 text-sm">${data.message || 'Unable to load sessions.'}</p>`;
+            return;
+        }
+
+        const sessions = data.upcoming_sessions || [];
+        if (sessions.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm">No upcoming sessions found.</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+
+        sessions.forEach(session => {
+            const itemHtml = `
+                <div class="border-l-4 border-indigo-500 pl-4 py-3 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
+                    <p class="font-semibold">${session.student_name}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">${session.date} • ${session.time}</p>
+                    <a href="${session.meeting_link || '#'}" target="_blank" class="mt-2 inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-200 text-sm font-semibold">
+                        <i class="fas fa-video"></i> Join Meeting
+                    </a>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', itemHtml);
+        });
+
+    } catch (error) {
+        console.error('loadUpcomingSessions error:', error);
+        container.innerHTML = '<p class="text-red-500 text-sm">Failed to load upcoming sessions.</p>';
+    }
 }
 
 /**
@@ -514,15 +687,15 @@ async function simulateMatch() {
         showMessage('This feature is for students only', 'warning');
         return;
     }
-    
+
     if (!matchingResult) return;
-    
+
     const matchButton = document.querySelector('[onclick="simulateMatch()"]');
     if (matchButton) setLoading(matchButton, true, 'Finding match...');
-    
+
     matchingResult.classList.remove('hidden');
     matchingResult.innerHTML = '<div class="flex items-center justify-center py-4"><i class="fas fa-spinner fa-spin text-2xl"></i><span class="ml-2">Finding your perfect match...</span></div>';
-    
+
     setTimeout(() => {
         matchingResult.innerHTML = `
             <div class="animate-scale-up">
@@ -561,30 +734,109 @@ function connectWithMatch(alumniId) {
 /**
  * Load user profile data
  */
-function loadUserProfile() {
+function setProfilePhoto(url) {
+    if (!profilePhotoImg) return;
+    if (url) {
+        profilePhotoImg.src = url;
+    } else if (currentUser && currentUser.name) {
+        profilePhotoImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=4f46e5&color=fff&size=128`;
+    } else {
+        profilePhotoImg.src = 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff&size=128';
+    }
+}
+
+async function loadUserProfile() {
     if (!currentUser) return;
-    
+
+    try {
+        const response = await fetch('/api/profile');
+        const data = await response.json();
+        if (data.success && data.user) {
+            currentUser = data.user;
+            localStorage.setItem('user', JSON.stringify(currentUser));
+        }
+    } catch (err) {
+        console.error('Cannot refresh profile:', err);
+    }
+
     if (profileName) profileName.textContent = currentUser.name || 'N/A';
     if (profileEmail) profileEmail.textContent = currentUser.email || 'N/A';
     if (profileType) profileType.textContent = currentUser.type || 'N/A';
     if (editHometown) editHometown.value = currentUser.hometown || '';
     if (editLanguage) editLanguage.value = currentUser.language || '';
-    
+
     const profileNameDisplay = document.getElementById('profile-name-display');
     if (profileNameDisplay) profileNameDisplay.textContent = currentUser.name || 'User';
-    
+
+    const profileTypeDisplay = document.getElementById('profile-type-display');
+    if (profileTypeDisplay) profileTypeDisplay.textContent = currentUser.type ? currentUser.type.toUpperCase() : '';
+
+    setProfilePhoto(currentUser.profile_image);
+    updateUserAvatar();
+
+    // Shared fields
+    const skillsField = document.getElementById('edit-skills');
+    const bioField = document.getElementById('edit-bio');
+    const linkedinField = document.getElementById('edit-linkedin');
+    const githubField = document.getElementById('edit-github');
+    const portfolioField = document.getElementById('edit-portfolio');
+
+    if (skillsField) skillsField.value = currentUser.skills || '';
+    if (bioField) bioField.value = currentUser.bio || '';
+    if (linkedinField) linkedinField.value = currentUser.linkedin || '';
+    if (githubField) githubField.value = currentUser.github || '';
+    if (portfolioField) portfolioField.value = currentUser.portfolio || '';
+
+    // Available for
+    if (currentUser.type === 'alumni') {
+        const availableFor = currentUser.available_for || [];
+        document.getElementById('avail-mentorship').checked = availableFor.includes('mentorship');
+        document.getElementById('avail-internship').checked = availableFor.includes('internship_referrals');
+        document.getElementById('avail-job').checked = availableFor.includes('job_referrals');
+        document.getElementById('avail-resume').checked = availableFor.includes('resume_review');
+        document.getElementById('avail-mock').checked = availableFor.includes('mock_interviews');
+    } else {
+        // Ensure unchecked for students
+        document.getElementById('avail-mentorship').checked = false;
+        document.getElementById('avail-internship').checked = false;
+        document.getElementById('avail-job').checked = false;
+        document.getElementById('avail-resume').checked = false;
+        document.getElementById('avail-mock').checked = false;
+    }
+
+    // Show/hide Available For section based on user type
+    const availSection = document.getElementById('available-for-section');
+    if (availSection) {
+        availSection.style.display = currentUser.type === 'alumni' ? 'block' : 'none';
+    }
+
+    // Alumni only details
+    const alumniSection = document.getElementById('alumni-professional-section');
     if (currentUser.type === 'alumni') {
         if (editProfessionRow) editProfessionRow.classList.remove('hidden');
         if (editProfession) editProfession.value = currentUser.profession || '';
-        document.getElementById('student-extra-fields').classList.add('hidden');
+        if (alumniSection) alumniSection.classList.remove('hidden');
+
+        document.getElementById('edit-company-name').value = currentUser.company_name || '';
+        document.getElementById('edit-designation').value = currentUser.designation || '';
+        document.getElementById('edit-company-location').value = currentUser.company_location || '';
+        document.getElementById('edit-experience-years').value = currentUser.experience_years || '';
+
+        // hide student specific if any
+        document.getElementById('student-extra-fields')?.classList.add('hidden');
     } else {
         if (editProfessionRow) editProfessionRow.classList.add('hidden');
-        // NEW: Show Student Fields
-        document.getElementById('student-extra-fields').classList.remove('hidden');
-        document.getElementById('edit-skills').value = currentUser.skills || '';
-        document.getElementById('edit-interests').value = currentUser.interests || '';
+        if (alumniSection) alumniSection.classList.add('hidden');
+
+        // student structured data may still use this
+        document.getElementById('edit-company-name').value = '';
+        document.getElementById('edit-designation').value = '';
+        document.getElementById('edit-company-location').value = '';
+        document.getElementById('edit-experience-years').value = '';
+        document.getElementById('student-extra-fields')?.classList.remove('hidden');
     }
 }
+
 
 /**
  * Save profile changes
@@ -592,23 +844,35 @@ function loadUserProfile() {
 async function saveProfileChanges(event) {
     event.preventDefault();
     if (!currentUser) return;
-    
+
     const updatedData = {
         hometown: editHometown.value,
-        language: editLanguage.value
+        language: editLanguage.value,
+        profession: currentUser.type === 'alumni' ? editProfession.value : undefined,
+        company_name: document.getElementById('edit-company-name')?.value || '',
+        designation: document.getElementById('edit-designation')?.value || '',
+        company_location: document.getElementById('edit-company-location')?.value || '',
+        experience_years: document.getElementById('edit-experience-years')?.value || '',
+        bio: document.getElementById('edit-bio')?.value || '',
+        skills: document.getElementById('edit-skills')?.value || '',
+        linkedin: document.getElementById('edit-linkedin')?.value || '',
+        github: document.getElementById('edit-github')?.value || '',
+        portfolio: document.getElementById('edit-portfolio')?.value || ''
     };
-    
+
+    const available = [];
     if (currentUser.type === 'alumni') {
-        updatedData.profession = editProfession.value;
-    } else {
-        // NEW: Save Student Fields
-        updatedData.skills = document.getElementById('edit-skills').value;
-        updatedData.interests = document.getElementById('edit-interests').value;
+        if (document.getElementById('avail-mentorship')?.checked) available.push('mentorship');
+        if (document.getElementById('avail-internship')?.checked) available.push('internship_referrals');
+        if (document.getElementById('avail-job')?.checked) available.push('job_referrals');
+        if (document.getElementById('avail-resume')?.checked) available.push('resume_review');
+        if (document.getElementById('avail-mock')?.checked) available.push('mock_interviews');
     }
-    
+    updatedData.available_for = available;
+
     const saveButton = document.querySelector('#profile-edit-form button');
     setLoading(saveButton, true, 'Saving...');
-    
+
     try {
         const response = await fetch('/api/profile', {
             method: 'PUT',
@@ -621,10 +885,84 @@ async function saveProfileChanges(event) {
             localStorage.setItem('user', JSON.stringify(currentUser));
             loadUserProfile();
             showMessage('Profile updated successfully!', 'success');
+        } else {
+            showMessage(data.message || 'Failed to save profile', 'error');
         }
-    } catch(e) { showMessage('Error saving profile', 'error'); }
-    
+    } catch (e) {
+        showMessage('Error saving profile', 'error');
+    }
+
     setLoading(saveButton, false);
+}
+
+function previewProfilePhoto() {
+    const file = profilePhotoInput?.files?.[0];
+    if (!file) return;
+
+    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+        showMessage('Please upload JPG or PNG images only', 'error');
+        profilePhotoInput.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        if (profilePhotoImg) profilePhotoImg.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Save to backend
+    uploadProfilePhoto(file);
+}
+
+async function uploadProfilePhoto(file) {
+    if (!currentUser || !file) return;
+
+    const formData = new FormData();
+    formData.append('profile_image', file);
+
+    try {
+        const response = await fetch('/api/profile/upload-photo', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+            currentUser = data.user;
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            setProfilePhoto(data.profile_image);
+            updateUserAvatar();
+            showMessage('Profile photo updated!', 'success');
+        } else {
+            showMessage(data.message || 'Error uploading photo', 'error');
+        }
+    } catch (error) {
+        console.error('uploadProfilePhoto error:', error);
+        showMessage('Upload failed', 'error');
+    }
+}
+
+async function removeProfilePhoto() {
+    if (!currentUser) return;
+
+    try {
+        const response = await fetch('/api/profile/remove-photo', {
+            method: 'POST'
+        });
+        const data = await response.json();
+        if (data.success) {
+            currentUser = data.user;
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            setProfilePhoto(null);
+            updateUserAvatar();
+            showMessage('Profile photo removed', 'success');
+        } else {
+            showMessage(data.message || 'Could not remove photo', 'error');
+        }
+    } catch (error) {
+        console.error('removeProfilePhoto error:', error);
+        showMessage('Remove photo failed', 'error');
+    }
 }
 
 // ============================================
@@ -636,7 +974,7 @@ async function saveProfileChanges(event) {
  */
 async function loadStoryboards() {
     if (!storyboardsContainer) return;
-    
+
     // NEW FIX: Show the posting form ONLY if the user is an Alumni
     if (shareJourneySection) {
         if (currentUser && currentUser.type === 'alumni') {
@@ -645,18 +983,18 @@ async function loadStoryboards() {
             shareJourneySection.classList.add('hidden');
         }
     }
-    
+
     storyboardsContainer.innerHTML = `
         <div class="col-span-full text-center py-8">
             <i class="fas fa-spinner fa-spin text-3xl text-indigo-500"></i>
             <p class="mt-2">Loading the feed...</p>
         </div>
     `;
-    
+
     try {
         const response = await fetch('/api/storyboards');
         const data = await response.json();
-        
+
         if (data.success && data.storyboards.length > 0) {
             storyboardsContainer.innerHTML = '';
             // Render each story like a feed post
@@ -679,7 +1017,7 @@ async function loadStoryboards() {
 function createStoryCard(story) {
     const card = document.createElement('div');
     card.className = 'card-enhanced p-6 mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 w-full';
-    
+
     const dateStr = story.created_at ? new Date(story.created_at).toLocaleDateString() : 'Just now';
     const imgHtml = story.image_url ? `<img src="${story.image_url}" alt="Story Image" class="w-full h-64 object-cover rounded-lg mb-4 mt-2 border border-gray-200 dark:border-gray-700">` : '';
 
@@ -737,7 +1075,7 @@ function createStoryCard(story) {
             
         </div>
     `;
-    
+
     return card;
 }
 /**
@@ -745,33 +1083,33 @@ function createStoryCard(story) {
  */
 async function handleShareJourney(event) {
     event.preventDefault();
-    
+
     if (!currentUser || currentUser.type !== 'alumni') {
         showMessage('Only alumni can share stories', 'warning');
         return;
     }
-    
+
     const title = storyTitleInput.value.trim();
     const description = storyDescriptionInput.value.trim();
     const imageUrl = storyImageUrlInput ? storyImageUrlInput.value.trim() : '';
-    
+
     if (!title || !description) {
         showMessage('Please provide title and description', 'error');
         return;
     }
-    
+
     const submitButton = document.querySelector('#share-journey-form button');
     setLoading(submitButton, true, 'Publishing...');
-    
+
     try {
         const response = await fetch('/api/storyboards/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, description, image_url: imageUrl })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             showMessage('Your story is live!', 'success');
             shareJourneyForm.reset();
@@ -795,7 +1133,7 @@ async function handleShareJourney(event) {
  */
 async function handleCreateSlot(event) {
     event.preventDefault();
-    
+
     if (!currentUser || currentUser.type !== 'alumni') {
         showMessage('Only alumni can create slots', 'warning');
         return;
@@ -806,7 +1144,7 @@ async function handleCreateSlot(event) {
     const duration = document.getElementById('slot-duration').value;
     const meetingLink = document.getElementById('slot-meeting-link').value;
 
-    if (!date || !time || !meetingLink) { 
+    if (!date || !time || !meetingLink) {
         showMessage('Please fill out all fields, including the meeting link', 'error');
         return;
     }
@@ -818,7 +1156,7 @@ async function handleCreateSlot(event) {
         const response = await fetch('/api/slots/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date, time, duration, meeting_link: meetingLink }) 
+            body: JSON.stringify({ date, time, duration, meeting_link: meetingLink })
         });
 
         const data = await response.json();
@@ -848,13 +1186,13 @@ async function loadAvailableSlots() {
     try {
         const response = await fetch('/api/slots/available');
         const data = await response.json();
-        
+
         if (data.success && data.slots.length > 0) {
-            availableSlotsList.innerHTML = ''; 
-            
+            availableSlotsList.innerHTML = '';
+
             data.slots.forEach(slot => {
                 const startTime = new Date(slot.start_time);
-                
+
                 const cardHtml = `
                     <div class="p-4 border border-green-200 dark:border-green-800 rounded-xl hover:shadow-md transition mb-3 bg-white dark:bg-gray-800">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -868,10 +1206,10 @@ async function loadAvailableSlots() {
                             </button>
                         </div>
                     </div>`;
-                
+
                 availableSlotsList.insertAdjacentHTML('beforeend', cardHtml);
             });
-            
+
             document.querySelectorAll('.book-slot-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     const slotId = e.currentTarget.getAttribute('data-slot-id');
@@ -896,9 +1234,9 @@ function loadQuickConnect() {
     } else {
         if (alumniSlotsSection) alumniSlotsSection.classList.add('hidden');
         if (availableSlotsSection) availableSlotsSection.classList.remove('hidden');
-        loadAvailableSlots(); 
+        loadAvailableSlots();
     }
-    loadMySlots(); 
+    loadMySlots();
 }
 
 /**
@@ -907,27 +1245,27 @@ function loadQuickConnect() {
 async function loadMySlots() {
     if (!mySlotsList) return;
     mySlotsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-indigo-500"></i> Loading...</div>';
-    
+
     try {
         const response = await fetch('/api/slots/my');
         const data = await response.json();
-        
+
         if (data.success && data.slots.length > 0) {
             mySlotsList.innerHTML = '';
             data.slots.forEach(slot => {
                 const startTime = new Date(slot.start_time);
-                
-                const statusHtml = slot.is_booked ? 
-                    `<p class="text-xs text-green-600 font-bold mt-1"><i class="fas fa-check-circle"></i> Booked by: ${slot.student_name || 'A Student'}</p>` : 
+
+                const statusHtml = slot.is_booked ?
+                    `<p class="text-xs text-green-600 font-bold mt-1"><i class="fas fa-check-circle"></i> Booked by: ${slot.student_name || 'A Student'}</p>` :
                     `<p class="text-xs text-gray-400 mt-1">Not booked yet</p>`;
 
-                const joinBtnHtml = slot.meeting_link ? 
+                const joinBtnHtml = slot.meeting_link ?
                     `<a href="${slot.meeting_link}" target="_blank" class="mt-3 inline-flex items-center bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-200 transition">
                         <i class="fas fa-video mr-2"></i> Join GMeet
                     </a>` : '';
 
                 // NEW: Show "Rate Session" if the student booked it and hasn't reviewed it yet
-                const reviewBtnHtml = (currentUser && currentUser.type === 'student' && slot.is_booked && !slot.is_reviewed) ? 
+                const reviewBtnHtml = (currentUser && currentUser.type === 'student' && slot.is_booked && !slot.is_reviewed) ?
                     `<button onclick="openFeedbackModal('${slot.id}')" class="mt-3 ml-2 inline-flex items-center border border-yellow-400 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition">
                         <i class="fas fa-star mr-2"></i> Rate Session
                     </button>` : '';
@@ -968,12 +1306,12 @@ async function bookSlot(slotId, buttonElement) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             showMessage('Successfully booked! The Alumni will see your name.', 'success');
-            loadAvailableSlots(); 
+            loadAvailableSlots();
             loadMySlots();
         } else {
             showMessage(data.message || 'Booking failed', 'error');
@@ -1015,7 +1353,7 @@ function renderResources(resourcesArray) {
         resourcesContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">No resources found.</p>';
         return;
     }
-    
+
     resourcesContainer.innerHTML = resourcesArray.map(res => `
         <div class="card-enhanced p-5 animate-fade-in border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
             <div class="flex justify-between items-start mb-2">
@@ -1034,7 +1372,7 @@ function renderResources(resourcesArray) {
 }
 
 // NEW: Function triggered when you type in the search bar or change the dropdown
-window.filterResources = function() {
+window.filterResources = function () {
     const searchTerm = document.getElementById('resource-search-input').value.toLowerCase();
     const selectedCategory = document.getElementById('resource-filter-select').value;
 
@@ -1071,7 +1409,7 @@ async function handleResourceUpload(event) {
     try {
         const response = await fetch('/api/resources/create', {
             method: 'POST',
-            body: formData 
+            body: formData
         });
 
         if (response.ok) {
@@ -1095,13 +1433,13 @@ async function handleResourceUpload(event) {
  */
 async function loadConfidencePosts() {
     if (!confidencePostsContainer) return;
-    
+
     confidencePostsContainer.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-    
+
     try {
         const response = await fetch('/api/confidence_corner/posts');
         const data = await response.json();
-        
+
         if (data.success && data.posts.length > 0) {
             confidencePostsContainer.innerHTML = '';
             data.posts.forEach(post => {
@@ -1137,19 +1475,19 @@ async function loadConfidencePosts() {
 async function handleConfidencePost(event) {
     event.preventDefault();
     const content = postContentInput.value.trim();
-    
+
     if (!content) return;
-    
+
     const submitButton = document.querySelector('#confidence-post-form button');
     setLoading(submitButton, true, 'Posting...');
-    
+
     try {
         const response = await fetch('/api/confidence_corner/post', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content })
         });
-        
+
         if (response.ok) {
             showMessage('Post shared anonymously!', 'success');
             postContentInput.value = '';
@@ -1170,7 +1508,7 @@ async function deletePost(postId) {
         showMessage('Only alumni can delete posts', 'warning');
         return;
     }
-    
+
     showMessage('Post deleted successfully', 'success');
     loadConfidencePosts();
 }
@@ -1184,7 +1522,7 @@ async function deletePost(postId) {
  */
 async function loadImpactTracker() {
     if (!impactTrackerPage) return;
-    
+
     impactTrackerPage.innerHTML = `
         <div class="text-center py-12">
             <i class="fas fa-chart-line text-4xl text-indigo-500 mb-3"></i>
@@ -1223,21 +1561,21 @@ async function loadImpactTracker() {
 function initDarkMode() {
     const darkModeToggle = document.getElementById('darkModeToggle');
     const isDark = localStorage.getItem('darkMode') === 'true';
-    
+
     if (isDark) {
         document.documentElement.classList.add('dark');
         if (darkModeToggle) {
             darkModeToggle.innerHTML = '<i class="fas fa-sun text-yellow-400 text-xl"></i>';
         }
     }
-    
+
     if (darkModeToggle) {
         darkModeToggle.addEventListener('click', () => {
             document.documentElement.classList.toggle('dark');
             const isDarkNow = document.documentElement.classList.contains('dark');
             localStorage.setItem('darkMode', isDarkNow);
-            darkModeToggle.innerHTML = isDarkNow ? 
-                '<i class="fas fa-sun text-yellow-400 text-xl"></i>' : 
+            darkModeToggle.innerHTML = isDarkNow ?
+                '<i class="fas fa-sun text-yellow-400 text-xl"></i>' :
                 '<i class="fas fa-moon text-gray-700 text-xl"></i>';
         });
     }
@@ -1258,24 +1596,24 @@ setInterval(() => {
 let notifiedSessions = [];
 setInterval(() => {
     if (!currentUser || !mySlotsList) return;
-    
+
     // Check the HTML of your slots for start times (simplest approach for your current UI)
     const cards = mySlotsList.querySelectorAll('.border-gray-200');
     cards.forEach(card => {
         const timeText = card.querySelector('.font-bold').innerText; // e.g. "4/2/2026 at 03:00 PM"
         const slotTime = new Date(timeText);
         const now = new Date();
-        
+
         // Calculate minutes difference
         const diffMs = slotTime - now;
         const diffMins = Math.floor(diffMs / 60000);
-        
+
         // If session is in less than 15 minutes and we haven't notified yet
         if (diffMins > 0 && diffMins <= 15 && !notifiedSessions.includes(timeText)) {
             notifiedSessions.push(timeText);
             // Trigger browser notification or your in-app toast
             showMessage(`Reminder: You have a mentorship session in ${diffMins} minutes!`, 'warning');
-            
+
             // Optional: System notification if browser allows
             if (Notification.permission === "granted") {
                 new Notification("UniVerge Session Reminder", { body: `Session starts in ${diffMins} minutes.` });
@@ -1299,28 +1637,38 @@ async function init() {
         const today = new Date().toISOString().split('T')[0];
         slotDateInput.min = today;
     }
-    
+
     // Initialize dark mode
     initDarkMode();
-    
+
     // Get current user
     currentUser = await getCurrentUser();
-    
+
     // Set up event listeners
     setupEventListeners();
-    
-    // FIXED: Prevent forced redirect on page refresh
+
+    const path = window.location.pathname;
+
     if (currentUser) {
         updateNavUI(currentUser);
-        // Only redirect to dashboard if the user is on the landing or auth page
-        const currentPage = document.querySelector('.active-page');
-        if (!currentPage || currentPage.id === 'landing-page' || currentPage.id === 'auth-page') {
-            showPage('dashboard');
+        if (path === '/' || path === '/landing' || path === '/auth' || path === '/student/dashboard' || path === '/alumni/dashboard' || path === '/chat') {
+            if (path === '/chat') {
+                showPage('chat');
+            } else {
+                showPage('dashboard');
+            }
         } else {
-            // Re-trigger the data load for the page they are currently on
-            showPage(currentPage.id.replace('-page', ''));
+            const currentPage = document.querySelector('.active-page');
+            if (currentPage) {
+                showPage(currentPage.id.replace('-page', ''));
+            } else {
+                showPage('dashboard');
+            }
         }
     } else {
+        if (path === '/student/dashboard' || path === '/alumni/dashboard' || path === '/auth' || path === '/chat') {
+            history.replaceState(null, '', '/');
+        }
         showPage('landing', false);
     }
 }
@@ -1332,19 +1680,21 @@ function setupEventListeners() {
     // Auth form
     if (authForm) authForm.addEventListener('submit', handleAuthSubmit);
     if (toggleAuthModeButton) toggleAuthModeButton.addEventListener('click', toggleAuthMode);
-    
+
     // Profile form
     if (profileEditForm) profileEditForm.addEventListener('submit', saveProfileChanges);
-    
+    if (profilePhotoInput) profilePhotoInput.addEventListener('change', previewProfilePhoto);
+    if (removePhotoBtn) removePhotoBtn.addEventListener('click', removeProfilePhoto);
+
     // Storyboard form
     if (shareJourneyForm) shareJourneyForm.addEventListener('submit', handleShareJourney);
-    
+
     // Quick connect form (ADDED missing handler linkage)
     if (createSlotForm) createSlotForm.addEventListener('submit', handleCreateSlot);
-    
+
     // Resource form
     if (uploadResourceForm) uploadResourceForm.addEventListener('submit', handleResourceUpload);
-    
+
     // Confidence corner form
     if (confidencePostForm) confidencePostForm.addEventListener('submit', handleConfidencePost);
 }
@@ -1356,14 +1706,15 @@ function setupEventListeners() {
 async function loadAlumniDirectory() {
     const container = document.getElementById('alumni-directory-results');
     const searchTerm = document.getElementById('alumni-search-input')?.value || '';
-    
+
     if (!container) return;
     container.innerHTML = '<div class="col-span-full text-center py-4"><i class="fas fa-spinner fa-spin text-indigo-500"></i> Searching...</div>';
-    
+
     try {
-        const response = await fetch(`/api/alumni?search=${encodeURIComponent(searchTerm)}`);
+        const userId = currentUser ? currentUser.id : '';
+        const response = await fetch(`/api/alumni?search=${encodeURIComponent(searchTerm)}&user_id=${userId}`);
         const data = await response.json();
-        
+
         if (data.success && data.alumni.length > 0) {
             container.innerHTML = data.alumni.map(al => `
                 <div class="p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm flex items-center gap-4">
@@ -1378,10 +1729,14 @@ async function loadAlumniDirectory() {
                         <p class="text-sm text-gray-600 dark:text-gray-300">${al.profession || 'Alumni Member'}</p>
                         <p class="text-xs text-gray-500 mt-1"><i class="fas fa-map-marker-alt"></i> ${al.hometown || 'Unknown Location'}</p>
                     </div>
-                    
-                    <button onclick="openReportModal('${al.id}', 'profile', '')" class="text-red-500 hover:text-white hover:bg-red-500 border border-red-500 transition-colors px-3 py-1 rounded-lg text-xs font-semibold flex flex-col items-center justify-center">
-                        <i class="fas fa-flag"></i> Report
-                    </button>
+                    <div class="flex flex-col gap-2">
+                        <button onclick="openMentorshipModal('${al.id}')" class="btn-primary-gradient px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center text-white">
+                            <i class="fas fa-handshake mr-1"></i> Request Mentor
+                        </button>
+                        <button onclick="openReportModal('${al.id}', 'profile', '')" class="text-red-500 hover:text-white hover:bg-red-500 border border-red-500 transition-colors px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center">
+                            <i class="fas fa-flag mr-1"></i> Report
+                        </button>
+                    </div>
                 </div>
             `).join('');
         } else {
@@ -1406,13 +1761,13 @@ async function submitFeedback(event) {
     const rating = document.getElementById('feedback-rating').value;
     const review = document.getElementById('feedback-review').value;
     const btn = event.target.querySelector('button[type="submit"]');
-    
+
     setLoading(btn, true, 'Submitting...');
-    
+
     try {
         const res = await fetch(`/api/feedback/${slotId}`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ rating, review })
         });
         const data = await res.json();
@@ -1424,7 +1779,7 @@ async function submitFeedback(event) {
             showMessage(data.message, 'error');
         }
     } catch (e) { showMessage('Error submitting rating', 'error'); }
-    
+
     setLoading(btn, false);
 }
 
@@ -1435,7 +1790,7 @@ async function submitFeedback(event) {
 
 async function deleteStoryRequest(storyId) {
     if (!confirm("Are you sure you want to delete this story?")) return;
-    
+
     try {
         const response = await fetch(`/api/storyboards/${storyId}`, { method: 'DELETE' });
         const data = await response.json();
@@ -1443,7 +1798,7 @@ async function deleteStoryRequest(storyId) {
             showMessage("Story deleted", "success");
             loadStoryboards(); // Refresh feed
         } else alert(data.message);
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 }
 
 function openEditModal(storyId, title, desc) {
@@ -1461,11 +1816,11 @@ async function submitStoryEdit() {
     const id = document.getElementById('edit-story-id').value;
     const title = document.getElementById('edit-story-title').value;
     const desc = document.getElementById('edit-story-desc').value;
-    
+
     try {
         const response = await fetch(`/api/storyboards/${id}`, {
             method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: title, description: desc })
         });
         const data = await response.json();
@@ -1474,7 +1829,7 @@ async function submitStoryEdit() {
             closeEditModal();
             loadStoryboards(); // Refresh feed
         }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 }
 
 // Don't forget to add these to the bottom of your script.js exports!
@@ -1482,6 +1837,10 @@ window.deleteStoryRequest = deleteStoryRequest;
 window.openEditModal = openEditModal;
 window.closeEditModal = closeEditModal;
 window.submitStoryEdit = submitStoryEdit;
+
+function openChat(connectionId, receiverId) {
+    window.location.href = `/chat?connection=${connectionId}`;
+}
 
 // Export functions for global access
 window.showPage = showPage;
@@ -1491,6 +1850,8 @@ window.connectWithMatch = connectWithMatch;
 window.bookSlot = bookSlot;
 window.deletePost = deletePost;
 window.showMessage = showMessage;
+window.openChat = openChat;
+window.openChat = openChat;
 
 // NEW EXPORTS FOR PHASE 2:
 window.loadAlumniDirectory = loadAlumniDirectory;
@@ -1511,10 +1872,10 @@ function openReportModal(reportedUserId, contentType, contentId) {
     document.getElementById('report-target-user-id').value = reportedUserId || '';
     document.getElementById('report-content-type').value = contentType || 'general';
     document.getElementById('report-content-id').value = contentId || '';
-    
+
     // Clear previous text
     document.getElementById('report-details').value = '';
-    
+
     // Show the modal
     document.getElementById('reportModal').style.display = 'flex';
 }
@@ -1548,7 +1909,7 @@ async function submitReportRequest() {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             alert(data.message);
             closeReportModal();
@@ -1560,3 +1921,522 @@ async function submitReportRequest() {
         alert("An error occurred. Please try again.");
     }
 }
+
+// ============================================
+// Job Board Functions (New Feature)
+// ============================================
+
+async function loadJobs() {
+    if (!document.getElementById('jobs-container')) return;
+
+    if (currentUser && currentUser.type === 'alumni') {
+        document.getElementById('alumni-job-post-section').classList.remove('hidden');
+    } else {
+        document.getElementById('alumni-job-post-section').classList.add('hidden');
+    }
+
+    const container = document.getElementById('jobs-container');
+    container.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-3xl text-indigo-500"></i><p>Loading opportunities...</p></div>';
+
+    try {
+        const response = await fetch('/api/jobs');
+        const data = await response.json();
+
+        if (data.success && data.jobs.length > 0) {
+            container.innerHTML = '';
+            data.jobs.forEach(job => {
+                const dateStr = new Date(job.created_at).toLocaleDateString();
+
+                let skillTags = '';
+                if (job.required_skills) {
+                    const skills = job.required_skills.split(',').map(s => s.trim()).filter(s => s);
+                    skillTags = skills.map(skill => `<span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs font-semibold">${skill}</span>`).join(' ');
+                }
+
+                let applyParams = '';
+                if (job.application_link) {
+                    applyParams = `<a href="${job.application_link}" target="_blank" class="btn-primary-gradient px-4 py-2 rounded-lg text-sm transition font-bold text-white leading-none inline-flex items-center"><i class="fas fa-external-link-alt mr-1"></i> Apply Externally</a>`;
+                } else if (job.contact_email) {
+                    applyParams = `<a href="mailto:${job.contact_email}" class="btn-primary-gradient px-4 py-2 rounded-lg text-sm transition font-bold text-white leading-none inline-flex items-center"><i class="fas fa-envelope mr-1"></i> Apply via Email</a>`;
+                } else {
+                    applyParams = (currentUser && currentUser.type === 'student') ?
+                        `<button onclick="handleApplyJob('${job.id}')" class="btn-primary-gradient px-4 py-2 rounded-lg text-sm transition font-bold text-white"><i class="fas fa-paper-plane mr-1"></i> Apply Now</button>` : '';
+                }
+
+                const expLevel = job.experience_level ? `<span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold whitespace-nowrap"><i class="fas fa-graduation-cap mr-1"></i>${job.experience_level}</span>` : '';
+                const compBadge = job.compensation_type ? `<span class="px-3 py-1 ${job.compensation_type === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} rounded-full text-xs font-bold whitespace-nowrap"><i class="fas fa-money-bill-wave mr-1"></i>${job.compensation_type} ${job.salary_range ? '(' + job.salary_range + ')' : ''}</span>` : '';
+                const deadlineStr = job.application_deadline ? `<span class="text-red-500 font-semibold bg-red-50 px-2 py-1 rounded whitespace-nowrap text-xs"><i class="fas fa-exclamation-circle mr-1"></i>Deadline: ${new Date(job.application_deadline).toLocaleDateString()}</span>` : '';
+                const joiningStr = job.joining_date ? `<span class="text-blue-500 font-semibold bg-blue-50 px-2 py-1 rounded whitespace-nowrap text-xs"><i class="fas fa-calendar-check mr-1"></i>Joining: ${new Date(job.joining_date).toLocaleDateString()}</span>` : '';
+
+                const jobCard = document.createElement('div');
+                jobCard.className = 'p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:shadow-lg transition bg-white dark:bg-gray-800 mb-6';
+                jobCard.innerHTML = `
+                    <div class="flex flex-col md:flex-row justify-between items-start mb-4 gap-4">
+                        <div>
+                            <h4 class="font-bold text-xl text-indigo-600 dark:text-indigo-400 mb-1">${job.title}</h4>
+                            <p class="font-semibold text-gray-800 dark:text-gray-200 text-lg">${job.company}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            ${expLevel}
+                            ${compBadge}
+                            <span class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-bold whitespace-nowrap">${job.type}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500 mb-4 items-center">
+                        <span><i class="fas fa-map-marker-alt mr-1"></i>${job.location}</span>
+                        <span><i class="fas fa-clock mr-1"></i>Posted ${dateStr}</span>
+                        ${deadlineStr}
+                        ${joiningStr}
+                    </div>
+                    
+                    ${skillTags ? `<div class="mb-4 flex flex-wrap gap-2">${skillTags}</div>` : ''}
+                    
+                    <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg mb-5 border border-gray-100 dark:border-gray-700">
+                        <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">${job.description}</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-sm border-t border-gray-100 dark:border-gray-700 pt-4">
+                        <span class="text-gray-500">Posted by: <strong>${job.alumni_name}</strong></span>
+                        ${applyParams}
+                    </div>
+                `;
+                container.appendChild(jobCard);
+            });
+        } else {
+            container.innerHTML = '<div class="text-center py-8 text-gray-500">No job opportunities posted yet.</div>';
+        }
+    } catch (e) {
+        container.innerHTML = '<div class="text-center py-8 text-red-500">Error loading opportunities. Please try again later.</div>';
+        console.error("Error loading jobs:", e);
+    }
+}
+
+document.getElementById('create-job-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser || currentUser.type !== 'alumni') return;
+
+    const submitBtn = e.target.querySelector('button');
+    setLoading(submitBtn, true, 'Posting...');
+
+    const body = {
+        title: document.getElementById('job-title').value,
+        company: document.getElementById('job-company').value,
+        location: document.getElementById('job-location').value,
+        type: document.getElementById('job-type').value,
+        description: document.getElementById('job-description').value,
+        application_link: document.getElementById('job-application-link').value,
+        contact_email: document.getElementById('job-contact-email').value,
+        experience_level: document.getElementById('job-experience-level').value,
+        required_skills: document.getElementById('job-required-skills').value,
+        compensation_type: document.getElementById('job-compensation-type').value,
+        salary_range: document.getElementById('job-salary-range').value,
+        application_deadline: document.getElementById('job-deadline').value,
+        joining_date: document.getElementById('job-joining-date').value
+    };
+
+    try {
+        const response = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showMessage('Opportunity posted successfully!', 'success');
+            e.target.reset();
+            loadJobs();
+        } else {
+            showMessage(data.message || 'Failed to post opportunity.', 'error');
+        }
+    } catch (err) {
+        showMessage('Network Error posting opportunity.', 'error');
+        console.error(err);
+    }
+    setLoading(submitBtn, false);
+});
+
+async function handleApplyJob(jobId) {
+    if (!currentUser || currentUser.type !== 'student') {
+        showMessage('Only students can apply.', 'warning');
+        return;
+    }
+    try {
+        const response = await fetch('/api/jobs/' + jobId + '/apply', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success) {
+            showMessage(data.message, 'success');
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (e) {
+        showMessage('Failed to process your application.', 'error');
+        console.error("Error applying to job:", e);
+    }
+}
+
+window.handleApplyJob = handleApplyJob;
+window.loadJobs = loadJobs;
+
+// ============================================
+// Mentorship System (New Feature)
+// ============================================
+
+function openMentorshipModal(alumniId) {
+    if (!currentUser || currentUser.type !== 'student') {
+        showMessage('You must be registered as a student to request mentorship.', 'warning');
+        return;
+    }
+    document.getElementById('request-alumni-id').value = alumniId;
+    document.getElementById('request-mentorship-modal').classList.remove('hidden');
+}
+
+function closeMentorshipModal() {
+    document.getElementById('request-mentorship-modal').classList.add('hidden');
+    document.getElementById('request-mentorship-form').reset();
+}
+
+document.getElementById('request-mentorship-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    setLoading(btn, true, 'Sending...');
+
+    const payload = {
+        alumni_id: document.getElementById('request-alumni-id').value,
+        department: document.getElementById('request-department').value,
+        year: document.getElementById('request-year').value,
+        skills: document.getElementById('request-skills').value,
+        goal: document.getElementById('request-goal').value,
+        preferred_duration: document.getElementById('request-duration').value || "Not Specified"
+    };
+
+    try {
+        const response = await fetch('/api/mentorship/request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            closeMentorshipModal();
+            loadDashboardData();
+        } else {
+            showMessage(data.message || 'Failed to send request.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showMessage('Network error sending mentorship request.', 'error');
+    }
+    setLoading(btn, false);
+});
+
+function openTaskModal(connectionId) {
+    document.getElementById('task-connection-id').value = connectionId;
+    document.getElementById('assign-task-modal').classList.remove('hidden');
+}
+
+function closeTaskModal() {
+    document.getElementById('assign-task-modal').classList.add('hidden');
+    document.getElementById('assign-task-form').reset();
+}
+
+document.getElementById('assign-task-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    setLoading(btn, true, 'Assigning...');
+
+    const payload = {
+        connection_id: document.getElementById('task-connection-id').value,
+        task_title: document.getElementById('task-title').value,
+        description: document.getElementById('task-desc').value,
+        deadline: document.getElementById('task-deadline').value,
+        priority: document.getElementById('task-priority').value
+    };
+
+    try {
+        const response = await fetch('/api/mentorship/task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            closeTaskModal();
+            loadDashboardData();
+        } else {
+            showMessage(data.message || 'Failed to assign task.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showMessage('Error assigning task.', 'error');
+    }
+    setLoading(btn, false);
+});
+
+function openCompleteModal(taskId) {
+    document.getElementById('complete-task-id').value = taskId;
+    document.getElementById('complete-task-modal').classList.remove('hidden');
+}
+
+function closeCompleteModal() {
+    document.getElementById('complete-task-modal').classList.add('hidden');
+    document.getElementById('complete-task-form').reset();
+}
+
+document.getElementById('complete-task-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    setLoading(btn, true, 'Submitting...');
+
+    const taskId = document.getElementById('complete-task-id').value;
+    const payload = {
+        completion_notes: document.getElementById('task-notes').value,
+        submission_link: document.getElementById('task-link').value
+    };
+
+    try {
+        const response = await fetch('/api/mentorship/task/' + taskId + '/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            closeCompleteModal();
+            loadDashboardData();
+        } else {
+            showMessage(data.message || 'Failed to complete task.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showMessage('Error completing task.', 'error');
+    }
+    setLoading(btn, false);
+});
+
+document.getElementById('progress-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    setLoading(btn, true, 'Logging...');
+
+    const connectionId = document.getElementById('progress-connection-id').value;
+    if (!connectionId) {
+        showMessage('No active mentorship connection found.', 'error');
+        setLoading(btn, false);
+        return;
+    }
+
+    const payload = {
+        connection_id: connectionId,
+        progress_text: document.getElementById('progress-text').value
+    };
+
+    try {
+        const response = await fetch('/api/mentorship/progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            e.target.reset();
+            loadDashboardData();
+        } else {
+            showMessage(data.message || 'Failed to submit progress.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showMessage('Error submitting progress.', 'error');
+    }
+    setLoading(btn, false);
+});
+
+async function respondToRequest(reqId, status) {
+    try {
+        const response = await fetch('/api/mentorship/request/' + reqId + '/respond', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showMessage(data.message, 'success');
+            loadDashboardData();
+        } else {
+            showMessage(data.message || 'Failed', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function loadMentorshipDashboard() {
+    document.getElementById('mentorship-hub-section').classList.remove('hidden');
+
+    if (currentUser.type === 'alumni') {
+        document.getElementById('mentorship-alumni-view').classList.remove('hidden');
+        document.getElementById('mentorship-student-view').classList.add('hidden');
+
+        // Load Pending Requests
+        const reqRes = await fetch('/api/mentorship/requests');
+        const reqData = await reqRes.json();
+        const reqContainer = document.getElementById('mentorship-requests-container');
+        if (reqData.success && reqData.requests.length > 0) {
+            reqContainer.innerHTML = reqData.requests.map(r => `
+                <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm transition hover:shadow-md">
+                    <p class="font-bold text-lg text-indigo-600 mb-1">${r.student_name}</p>
+                    <p class="text-sm text-gray-500 mb-2"><i class="fas fa-graduation-cap"></i> ${r.department} • Year: ${r.year}</p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300 mb-2"><strong>Goal:</strong> ${r.goal}</p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4"><strong>Skills:</strong> ${r.skills}</p>
+                    <div class="flex gap-2">
+                        <button onclick="respondToRequest('${r.id}', 'accepted')" class="btn-primary-gradient px-4 py-2 rounded-lg text-sm font-bold text-white flex items-center justify-center flex-1 transition"><i class="fas fa-check mr-2"></i> Accept</button>
+                        <button onclick="respondToRequest('${r.id}', 'rejected')" class="bg-gray-100 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg text-sm font-bold text-gray-700 flex items-center justify-center flex-1 transition"><i class="fas fa-times mr-2"></i> Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            reqContainer.innerHTML = '<p class="text-gray-500 text-sm italic">No pending mentorship requests.</p>';
+        }
+
+        // Load Connections
+        const conRes = await fetch('/api/mentorship/connections');
+        const conData = await conRes.json();
+        const conContainer = document.getElementById('mentorship-mentees-container');
+        if (conData.success && conData.connections.length > 0) {
+            conContainer.innerHTML = '';
+            for (const c of conData.connections) {
+                const progRes = await fetch('/api/mentorship/progress?connection_id=' + c.id);
+                const progData = await progRes.json();
+                const progCount = progData.success ? progData.progress.length : 0;
+
+                conContainer.innerHTML += `
+                    <div class="p-5 border border-indigo-100 dark:border-indigo-900/50 rounded-xl bg-white dark:bg-gray-800 shadow-lg relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-bl-full transform translate-x-8 -translate-y-8 group-hover:scale-110 transition duration-500"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h5 class="font-bold text-xl text-gray-900 dark:text-white mb-1"><i class="fas fa-user-graduate text-indigo-500 mr-2"></i>${c.student_name}</h5>
+                                <p class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full inline-block mt-1">Mentee</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="openChat('${c.id}', '${c.student_id}')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                                    <i class="fas fa-comments mr-2"></i> Message
+                                </button>
+                                <button onclick="openTaskModal('${c.id}')" class="btn-primary-gradient px-4 py-2 text-sm rounded-lg font-bold text-white shadow hover:shadow-lg transition-transform transform hover:-translate-y-1"><i class="fas fa-plus mr-1"></i> Assign Task</button>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg flex items-center justify-between border border-gray-100 dark:border-gray-800">
+                            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Tracker</span>
+                            <p class="text-sm font-bold text-green-600"><i class="fas fa-chart-line mr-1"></i> ${progCount} Updates</p>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            conContainer.innerHTML = '<p class="col-span-full text-gray-500 text-sm italic">You currently have no mentees.</p>';
+        }
+    } else {
+        // Student View
+        document.getElementById('mentorship-student-view').classList.remove('hidden');
+        document.getElementById('mentorship-alumni-view').classList.add('hidden');
+
+        const conRes = await fetch('/api/mentorship/connections');
+        const conData = await conRes.json();
+
+        if (conData.success && conData.connections.length > 0) {
+            const activeConnection = conData.connections[0];
+            document.getElementById('progress-connection-id').value = activeConnection.id;
+
+            document.getElementById('mentorship-mentor-container').innerHTML = `
+                <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-inner">
+                            ${activeConnection.alumni_name.charAt(0)}
+                        </div>
+                        <div>
+                            <p class="font-bold text-xl text-gray-900 dark:text-white">${activeConnection.alumni_name}</p>
+                            <span class="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-md mt-1"><i class="fas fa-shield-check"></i> Connected Mentor</span>
+                        </div>
+                    </div>
+                    <button onclick="openChat('${activeConnection.id}', '${activeConnection.alumni_id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                        <i class="fas fa-comments mr-2"></i> Message
+                    </button>
+                </div>
+            `;
+
+            // Load Tasks
+            const taskRes = await fetch('/api/mentorship/tasks?connection_id=' + activeConnection.id);
+            const taskData = await taskRes.json();
+            const taskContainer = document.getElementById('mentorship-tasks-container');
+            if (taskData.success && taskData.tasks.length > 0) {
+                taskContainer.innerHTML = taskData.tasks.map(t => {
+                    const badgeClr = t.priority === 'high' ? 'bg-red-100 text-red-800' : (t.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800');
+                    const isCompleted = t.status === 'completed';
+                    const compBtn = isCompleted ?
+                        `<span class="text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full"><i class="fas fa-check-circle"></i> Completed</span>` :
+                        `<button onclick="openCompleteModal('${t.id}')" class="bg-gray-100 hover:bg-green-500 hover:text-white border border-gray-200 px-4 py-2 rounded-lg text-sm font-bold text-gray-700 transition shadow-sm hover:shadow">Mark as Done</button>`;
+                    const opacityLayer = isCompleted ? 'opacity-80' : 'opacity-100';
+                    return `
+                    <div class="p-4 border ${isCompleted ? 'border-green-200 dark:border-green-900 bg-green-50/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'} rounded-xl shadow-sm ${opacityLayer}">
+                        <div class="flex justify-between items-start mb-3">
+                            <h5 class="font-bold text-lg text-gray-900 dark:text-white">${t.task_title}</h5>
+                            <span class="px-2 py-1 rounded-lg text-xs font-bold ${badgeClr} uppercase tracking-wider">${t.priority}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mb-4 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">${t.description}</p>
+                        <div class="flex justify-between items-center mt-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+                            <span class="text-xs font-semibold ${isCompleted ? 'text-green-600' : 'text-red-500'}"><i class="fas fa-clock mr-1"></i>Due: ${t.deadline}</span>
+                            ${compBtn}
+                        </div>
+                    </div>`;
+                }).join('');
+            } else {
+                taskContainer.innerHTML = '<div class="text-center p-6 bg-gray-50 rounded-xl"><p class="text-gray-500 italic">No tasks currently assigned.</p></div>';
+            }
+
+            // Load Progress
+            const progRes = await fetch('/api/mentorship/progress?connection_id=' + activeConnection.id);
+            const progData = await progRes.json();
+            const progContainer = document.getElementById('progress-history-container');
+            if (progData.success && progData.progress.length > 0) {
+                progContainer.innerHTML = progData.progress.map(p => `
+                    <div class="relative pl-6 pb-4 border-l-2 border-indigo-200 dark:border-indigo-800 last:border-0 last:pb-0">
+                        <div class="absolute w-3 h-3 bg-indigo-500 rounded-full left-[-7px] top-1 shadow-[0_0_0_4px_rgba(99,102,241,0.2)]"></div>
+                        <p class="text-xs text-indigo-500 font-bold mb-1 uppercase tracking-wider">${new Date(p.created_at).toLocaleDateString()}</p>
+                        <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                            <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">${p.progress_text}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                progContainer.innerHTML = '<p class="text-gray-400 italic text-sm text-center py-4">No progress logs recorded yet.</p>';
+            }
+        } else {
+            document.getElementById('mentorship-mentor-container').innerHTML = `
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                    <p class="text-yellow-700 dark:text-yellow-500 font-medium"><i class="fas fa-exclamation-circle mr-2"></i>You are not connected to a mentor yet.</p>
+                    <p class="text-sm text-yellow-600 dark:text-yellow-600 mt-1">Search the directory below and send a request to get started!</p>
+                </div>
+            `;
+            document.getElementById('mentorship-tasks-container').innerHTML = '<div class="opacity-50 blur-[1px] select-none"><div class="p-4 border rounded-xl"><div class="h-4 bg-gray-200 rounded w-1/3 mb-4"></div><div class="h-2 bg-gray-200 rounded w-full mb-2"></div><div class="h-2 bg-gray-200 rounded w-2/3"></div></div></div>';
+            document.getElementById('progress-history-container').innerHTML = '';
+        }
+    }
+}
+
+const originalLoadDashboardData = loadDashboardData || function () { };
+window.loadDashboardData = async function () {
+    await originalLoadDashboardData();
+    loadMentorshipDashboard();
+};
+
+window.openMentorshipModal = openMentorshipModal;
+window.closeMentorshipModal = closeMentorshipModal;
+window.openTaskModal = openTaskModal;
+window.closeTaskModal = closeTaskModal;
+window.openCompleteModal = openCompleteModal;
+window.closeCompleteModal = closeCompleteModal;
