@@ -177,8 +177,7 @@ UniVerge is a mentorship and networking platform designed to connect students wi
 
 ## Contributors
 
-* Student Developer — UniVerge Team
-* Alumni Mentorship Platform Project
+* Krishna
 
 ---
 
