@@ -185,11 +185,9 @@ async function sendMessage() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Load conversations when page loads
+    // Load conversations when page loads is handled by script.js showPage('chat')
     if (document.getElementById('chat-page')) {
-        const params = new URLSearchParams(window.location.search);
-        const selectedConnection = params.get('connection');
-        loadConversations(selectedConnection);
+        // Events specific to chat page are set up here, but data loading happens in showPage
     }
 
     // Send message on button click

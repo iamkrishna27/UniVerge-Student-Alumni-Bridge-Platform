@@ -293,6 +293,20 @@ function showPage(pageId, requireAuth = true) {
                 }
                 break;
         }
+    } else {
+        // If target page doesn't exist in DOM, we are likely on a separate standalone page (like /chat)
+        // Redirect to main app with the target page in query params
+        if (pageId !== 'chat') {
+            if (currentUser) {
+                const basePath = currentUser.type === 'student' ? '/student/dashboard' : '/alumni/dashboard';
+                window.location.href = `${basePath}?page=${pageId}`;
+            } else {
+                window.location.href = `/?page=${pageId}`;
+            }
+        } else {
+            window.location.href = '/chat';
+        }
+        return;
     }
 
     // Update active nav link
@@ -1648,10 +1662,16 @@ async function init() {
     setupEventListeners();
 
     const path = window.location.pathname;
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageFromUrl = urlParams.get('page');
 
     if (currentUser) {
         updateNavUI(currentUser);
-        if (path === '/' || path === '/landing' || path === '/auth' || path === '/student/dashboard' || path === '/alumni/dashboard' || path === '/chat') {
+        if (pageFromUrl) {
+            showPage(pageFromUrl);
+            // Optionally clean up URL
+            history.replaceState(null, '', currentUser.type === 'student' ? '/student/dashboard' : '/alumni/dashboard');
+        } else if (path === '/' || path === '/landing' || path === '/auth' || path === '/student/dashboard' || path === '/alumni/dashboard' || path === '/chat') {
             if (path === '/chat') {
                 showPage('chat');
             } else {
