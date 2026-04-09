@@ -204,6 +204,87 @@ def get_profile():
     current_user = doc_to_dict(user_doc)
     return jsonify({"user": current_user, "success": True}), 200
 
+@app.route('/api/profile/alumni/<alumni_id>', methods=['GET'])
+def get_alumni_profile(alumni_id):
+    try:
+        user_doc = users_collection.find_one({"_id": ObjectId(alumni_id), "type": "alumni"})
+        if not user_doc:
+            return jsonify({"success": False, "message": "Alumni not found"}), 404
+            
+        profile_data = {
+            "id": str(user_doc['_id']),
+            "name": user_doc.get('name', ''),
+            "profile_image": user_doc.get('profile_image', ''),
+            "role": user_doc.get('profession') or user_doc.get('designation', ''),
+            "company": user_doc.get('company_name', ''),
+            "experience": user_doc.get('experience_years', ''),
+            "location": user_doc.get('company_location') or user_doc.get('hometown', ''),
+            "skills": user_doc.get('skills', ''),
+            "bio": user_doc.get('bio', ''),
+            "linkedin": user_doc.get('linkedin', ''),
+            "available_for": user_doc.get('available_for', '')
+        }
+        
+        connection_status = "none"
+        connection_id = None
+        if current_user and current_user['type'] == 'student':
+            conn = db.mentorship_connections.find_one({"student_id": current_user['id'], "alumni_id": alumni_id})
+            if conn:
+                connection_status = "connected"
+                connection_id = str(conn['_id'])
+            else:
+                req = db.mentorship_requests.find_one({"student_id": current_user['id'], "alumni_id": alumni_id, "status": "pending"})
+                if req:
+                    connection_status = "pending"
+                    
+        profile_data['connection_status'] = connection_status
+        profile_data['connection_id'] = connection_id
+        return jsonify({"profile": profile_data, "success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+
+@app.route('/api/profile/student/<student_id>', methods=['GET'])
+def get_student_profile(student_id):
+    try:
+        user_doc = users_collection.find_one({"_id": ObjectId(student_id), "type": "student"})
+        if not user_doc:
+            return jsonify({"success": False, "message": "Student not found"}), 404
+            
+        profile_data = {
+            "id": str(user_doc['_id']),
+            "name": user_doc.get('name', ''),
+            "profile_image": user_doc.get('profile_image', ''),
+            "department": user_doc.get('department', ''),
+            "year": user_doc.get('year', ''),
+            "college": user_doc.get('college', ''),
+            "skills": user_doc.get('skills', ''),
+            "bio": user_doc.get('bio', ''),
+            "career_interests": user_doc.get('career_interests', ''),
+            "projects": user_doc.get('projects', []),
+            "github": user_doc.get('github', ''),
+            "portfolio": user_doc.get('portfolio', ''),
+            "linkedin": user_doc.get('linkedin', '')
+        }
+
+        connection_status = "none"
+        connection_id = None
+        if current_user and current_user['type'] == 'alumni':
+            conn = db.mentorship_connections.find_one({"alumni_id": current_user['id'], "student_id": student_id})
+            if conn:
+                connection_status = "connected"
+                connection_id = str(conn['_id'])
+            else:
+                req = db.mentorship_requests.find_one({"alumni_id": current_user['id'], "student_id": student_id, "status": "pending"})
+                if req:
+                    connection_status = "pending"
+                    
+        profile_data['connection_status'] = connection_status
+        profile_data['connection_id'] = connection_id
+        return jsonify({"profile": profile_data, "success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+
+
 
 @app.route('/api/profile', methods=['PUT'])
 def update_profile():
@@ -651,6 +732,28 @@ def get_mentorship_requests():
         
     reqs = list(db.mentorship_requests.find({"alumni_id": ObjectId(current_user['id']), "status": "pending"}).sort("created_at", -1))
     return jsonify({"requests": [doc_to_dict(req) for req in reqs], "success": True}), 200
+
+@app.route('/api/connections/request', methods=['POST'])
+def connections_request():
+    global current_user
+    if not current_user or current_user['type'] != 'student':
+        return jsonify({"success": False, "message": "Only students can request connection"}), 403
+    
+    data = request.get_json()
+    new_req = {
+        "student_id": ObjectId(data['student_id']),
+        "student_name": current_user['name'],
+        "alumni_id": ObjectId(data['alumni_id']),
+        "department": current_user.get('department', 'N/A'),
+        "year": current_user.get('year', 'N/A'),
+        "skills": current_user.get('skills', ''),
+        "goal": "I would like to connect and learn more.",
+        "preferred_duration": "Flexible",
+        "status": "pending",
+        "created_at": datetime.now()
+    }
+    db.mentorship_requests.insert_one(new_req)
+    return jsonify({"success": True, "message": "Request sent."}), 201
 
 @app.route('/api/mentorship/request/<req_id>/respond', methods=['POST'])
 def respond_mentorship_request(req_id):

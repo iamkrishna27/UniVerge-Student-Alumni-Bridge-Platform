@@ -32,6 +32,7 @@ const quickConnectPage = document.getElementById('quick-connect-page');
 const resourceBankPage = document.getElementById('resource-bank-page');
 const confidenceCornerPage = document.getElementById('confidence-corner-page');
 const chatPage = document.getElementById('chat-page');
+const publicProfilePage = document.getElementById('public-profile-page');
 
 // Auth Elements
 const authTitle = document.getElementById('auth-title');
@@ -103,6 +104,7 @@ const confidencePostsContainer = document.getElementById('confidence-posts-conta
 // State Variables
 let isRegisterMode = false;
 let currentUser = null;
+let previousPageBeforeProfile = null;
 
 // ============================================
 // Utility Functions
@@ -242,7 +244,7 @@ function showPage(pageId, requireAuth = true) {
     const pages = [
         landingPage, authPage, dashboardPage, profilePage,
         storyboardPage, jobBoardPage, quickConnectPage,
-        resourceBankPage, confidenceCornerPage, chatPage
+        resourceBankPage, confidenceCornerPage, chatPage, publicProfilePage
     ];
 
     pages.forEach(page => {
@@ -350,6 +352,203 @@ function updateActiveNavLink(pageId) {
     if (activeLink) {
         activeLink.classList.add('active', 'text-indigo-600', 'dark:text-indigo-400', 'font-semibold');
         activeLink.classList.remove('text-gray-700', 'dark:text-gray-200');
+    }
+}
+
+/**
+ * Handle browser back navigation
+ */
+window.addEventListener('popstate', (event) => {
+    // If we're on public profile and user hits back
+    if (window.location.pathname.startsWith('/profile/') && event.state !== null) {
+        // Just standard back navigation
+    } else if (previousPageBeforeProfile) {
+        showPage(previousPageBeforeProfile);
+        previousPageBeforeProfile = null;
+    }
+});
+
+/**
+ * Open public profile dynamically
+ */
+async function openProfile(id, role) {
+    if (!id || !role) return;
+
+    // Track where we came from
+    const activePage = document.querySelector('.active-page');
+    if (activePage && activePage.id !== 'public-profile-page') {
+        previousPageBeforeProfile = activePage.id.replace('-page', '');
+    }
+
+    // Show the public profile container
+    showPage('public-profile');
+    
+    // Push the URL state without reloading
+    history.pushState({ page: 'public-profile', id, role }, '', `/profile/${role}/${id}`);
+
+    const loadingDiv = document.getElementById('public-profile-loading');
+    const contentDiv = document.getElementById('public-profile-content');
+    
+    loadingDiv.classList.remove('hidden');
+    contentDiv.classList.add('hidden');
+    contentDiv.innerHTML = '';
+
+    try {
+        const response = await fetch(`/api/profile/${role}/${id}`);
+        const data = await response.json();
+
+        if (data.success) {
+            const profile = data.profile;
+            
+            // Build dynamic UI based on role
+            let uiHtml = `
+                <div class="relative rounded-t-2xl overflow-hidden mb-6 h-32 md:h-48 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 w-full header-banner">
+                </div>
+                <div class="relative -mt-20 md:-mt-24 px-6 md:px-10 flex flex-col items-center sm:items-start sm:flex-row gap-6 mb-8">
+                    <img src="${profile.profile_image || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff&size=200'}" 
+                         alt="Profile Photo" 
+                         class="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-xl object-cover bg-white">
+                    
+                    <div class="mt-2 text-center sm:text-left flex-1">
+                        <h2 class="text-3xl font-bold text-gray-900 dark:text-white">${profile.name || 'Anonymous User'}</h2>
+                        
+                        ${role === 'alumni' ? `
+                            <p class="text-xl text-indigo-600 dark:text-indigo-400 font-semibold mb-1">${profile.role || 'Alumni'}</p>
+                            <p class="text-gray-600 dark:text-gray-300"><i class="fas fa-building mr-2"></i>${profile.company || 'Company N/A'}</p>
+                            ${profile.location ? `<p class="text-gray-500 dark:text-gray-400 text-sm mt-1"><i class="fas fa-map-marker-alt mr-2"></i>${profile.location}</p>` : ''}
+                        ` : `
+                            <p class="text-xl text-indigo-600 dark:text-indigo-400 font-semibold mb-1">${profile.department || 'Student'} • Year ${profile.year || 'N/A'}</p>
+                            <p class="text-gray-600 dark:text-gray-300"><i class="fas fa-university mr-2"></i>${profile.college || 'University N/A'}</p>
+                        `}
+                    </div>
+                </div>
+
+                <div class="px-6 md:px-10 flex gap-3 mb-8 justify-center sm:justify-start">
+                    ${profile.connection_status === 'connected' ? `
+                        <button onclick="openChat('${profile.connection_id}', '${profile.id}')" class="btn-primary-gradient px-6 py-2 rounded-full font-semibold flex items-center gap-2 hover:shadow-lg transition">
+                            <i class="fas fa-comment-dots"></i> Message
+                        </button>
+                    ` : `
+                        <button onclick="showMessage('You must be connected to message this user.', 'warning')" class="bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-6 py-2 rounded-full font-semibold flex items-center gap-2 cursor-not-allowed">
+                            <i class="fas fa-comment-dots"></i> Message
+                        </button>
+                    `}
+                    
+                    ${role === 'alumni' && currentUser && currentUser.type === 'student' ? (
+                        profile.connection_status === 'connected' ? `
+                            <button class="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-6 py-2 rounded-full font-semibold flex items-center gap-2 cursor-default">
+                                <i class="fas fa-check"></i> Connected
+                            </button>
+                        ` : profile.connection_status === 'pending' ? `
+                            <button class="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 px-6 py-2 rounded-full font-semibold flex items-center gap-2 cursor-default">
+                                <i class="fas fa-clock"></i> Request Sent
+                            </button>
+                        ` : `
+                            <button onclick="sendConnectionRequest('${profile.id}', this)" class="btn-secondary-gradient px-6 py-2 rounded-full font-semibold flex items-center gap-2 hover:shadow-lg transition">
+                                <i class="fas fa-user-plus"></i> Connect
+                            </button>
+                        `
+                    ) : ''}
+                    
+                    ${role === 'student' && currentUser && currentUser.type === 'alumni' && profile.connection_status === 'connected' ? `
+                        <button onclick="openTaskModal('${profile.connection_id}'); goBackFromProfile();" class="btn-secondary-gradient px-6 py-2 rounded-full font-semibold flex items-center gap-2 hover:shadow-lg transition">
+                            <i class="fas fa-tasks"></i> Assign Task
+                        </button>
+                        <button onclick="goBackFromProfile(); showPage('dashboard');" class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 px-6 py-2 rounded-full font-semibold flex items-center gap-2 hover:shadow-lg transition">
+                            <i class="fas fa-chart-line"></i> Tracker
+                        </button>
+                    ` : ''}
+                </div>
+
+                <div class="px-6 md:px-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="md:col-span-2 space-y-6">
+                        <!-- Bio -->
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6">
+                            <h3 class="text-lg font-bold mb-3 border-b pb-2">About</h3>
+                            <p class="text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">${profile.bio || 'This user has not written a bio yet.'}</p>
+                        </div>
+                        
+                        <!-- Role Specific Detailed Sections -->
+                        ${role === 'alumni' && profile.experience ? `
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6">
+                                <h3 class="text-lg font-bold mb-3 border-b pb-2">Experience</h3>
+                                <p class="text-gray-700 dark:text-gray-200"><i class="fas fa-briefcase mr-2"></i>${profile.experience} Years of Professional Experience</p>
+                            </div>
+                        ` : ''}
+
+                        ${role === 'student' && profile.projects && profile.projects.length > 0 ? `
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6">
+                                <h3 class="text-lg font-bold mb-3 border-b pb-2">Projects</h3>
+                                <ul class="list-disc list-inside space-y-2">
+                                    ${profile.projects.map(p => `<li>${p.title || 'Project'}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- Sidebar content: Skills -->
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6">
+                            <h3 class="text-lg font-bold mb-3 border-b pb-2">Skills</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${profile.skills ? profile.skills.split(',').map(s => `<span class="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-sm px-3 py-1 rounded-full whitespace-nowrap">${s.trim()}</span>`).join('') : '<span class="text-gray-500 italic text-sm">No skills listed</span>'}
+                            </div>
+                        </div>
+
+                        ${role === 'student' && profile.career_interests ? `
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6">
+                                <h3 class="text-lg font-bold mb-3 border-b pb-2"><i class="fas fa-compass text-indigo-500 mr-2"></i>Career Interests</h3>
+                                <p class="text-gray-700 dark:text-gray-200 text-sm leading-relaxed">${profile.career_interests}</p>
+                            </div>
+                        ` : ''}
+
+                        ${profile.linkedin || profile.github || profile.portfolio ? `
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6 space-y-4">
+                                <h3 class="text-lg font-bold mb-3 border-b pb-2">Links</h3>
+                                ${profile.linkedin ? `
+                                    <a href="${profile.linkedin.startsWith('http') ? profile.linkedin : 'https://' + profile.linkedin}" target="_blank" class="text-blue-600 hover:underline font-semibold flex items-center gap-2">
+                                        <i class="fab fa-linkedin text-xl"></i> View LinkedIn
+                                    </a>
+                                ` : ''}
+                                ${profile.github ? `
+                                    <a href="${profile.github.startsWith('http') ? profile.github : 'https://' + profile.github}" target="_blank" class="text-gray-800 dark:text-gray-200 hover:underline font-semibold flex items-center gap-2">
+                                        <i class="fab fa-github text-xl"></i> View GitHub
+                                    </a>
+                                ` : ''}
+                                ${profile.portfolio ? `
+                                    <a href="${profile.portfolio.startsWith('http') ? profile.portfolio : 'https://' + profile.portfolio}" target="_blank" class="text-purple-600 hover:underline font-semibold flex items-center gap-2">
+                                        <i class="fas fa-globe text-xl"></i> View Portfolio
+                                    </a>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            contentDiv.innerHTML = uiHtml;
+            loadingDiv.classList.add('hidden');
+            contentDiv.classList.remove('hidden');
+        } else {
+            showMessage(data.message || 'Unable to load profile data', 'error');
+            goBackFromProfile();
+        }
+    } catch (err) {
+        console.error('Error fetching profile:', err);
+        showMessage('Network error fetching profile', 'error');
+        goBackFromProfile();
+    }
+}
+
+/**
+ * Return to previous page from profile
+ */
+function goBackFromProfile() {
+    if (previousPageBeforeProfile) {
+        showPage(previousPageBeforeProfile);
+        previousPageBeforeProfile = null;
+    } else {
+        // Fallback
+        showPage('dashboard');
     }
 }
 
@@ -1060,7 +1259,7 @@ function createStoryCard(story) {
                     ${story.name ? story.name.charAt(0) : 'A'}
                 </div>
                 <div>
-                    <h3 class="font-bold text-lg leading-tight">${story.name}</h3>
+                    <h3 class="font-bold text-lg leading-tight cursor-pointer hover:underline" onclick="openProfile('${story.alumni_id}', 'alumni')">${story.name}</h3>
                     <p class="text-xs text-gray-500">${story.profession || 'Alumni'} • ${dateStr}</p>
                 </div>
             </div>
@@ -1211,7 +1410,7 @@ async function loadAvailableSlots() {
                     <div class="p-4 border border-green-200 dark:border-green-800 rounded-xl hover:shadow-md transition mb-3 bg-white dark:bg-gray-800">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                             <div class="flex-1">
-                                <p class="font-semibold text-base text-indigo-600">${slot.alumni_name}</p>
+                                <p class="font-semibold text-base text-indigo-600 cursor-pointer hover:underline" onclick="openProfile('${slot.alumni_id}', 'alumni')">${slot.alumni_name}</p>
                                 <p class="text-sm text-gray-500">${startTime.toLocaleString()} (${slot.duration_minutes} min)</p>
                             </div>
                             <button class="book-slot-btn btn-primary-gradient px-4 py-2 rounded-full text-sm font-semibold text-white" 
@@ -1742,7 +1941,7 @@ async function loadAlumniDirectory() {
                         ${al.name.charAt(0)}
                     </div>
                     <div class="flex-1">
-                        <h4 class="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                        <h4 class="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-2 cursor-pointer hover:underline" onclick="openProfile('${al.id}', 'alumni')">
     ${al.name} 
     ${al.is_online ? '<span class="w-3 h-3 bg-green-500 rounded-full" title="Online Now"></span>' : '<span class="w-3 h-3 bg-gray-300 rounded-full" title="Offline"></span>'}
 </h4>
@@ -1882,6 +2081,34 @@ window.submitFeedback = submitFeedback;
 window.openReportModal = openReportModal;
 window.closeReportModal = closeReportModal;
 window.submitReportRequest = submitReportRequest;
+window.openProfile = openProfile;
+window.goBackFromProfile = goBackFromProfile;
+window.sendConnectionRequest = async function(alumniId, buttonElement) {
+    if (!currentUser || currentUser.type !== 'student') return;
+    buttonElement.disabled = true;
+    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    try {
+        const response = await fetch('/api/connections/request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ alumni_id: alumniId, student_id: currentUser.id })
+        });
+        const data = await response.json();
+        if (data.success) {
+            buttonElement.innerHTML = '<i class="fas fa-clock"></i> Request Sent';
+            buttonElement.classList.remove('btn-secondary-gradient');
+            buttonElement.classList.add('bg-yellow-100', 'text-yellow-700', 'dark:bg-yellow-900/40', 'dark:text-yellow-400');
+        } else {
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = '<i class="fas fa-user-plus"></i> Connect';
+            showMessage(data.message || 'Failed to send request', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = '<i class="fas fa-user-plus"></i> Connect';
+    }
+};
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', init);
@@ -2310,7 +2537,7 @@ async function loadMentorshipDashboard() {
         if (reqData.success && reqData.requests.length > 0) {
             reqContainer.innerHTML = reqData.requests.map(r => `
                 <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm transition hover:shadow-md">
-                    <p class="font-bold text-lg text-indigo-600 mb-1">${r.student_name}</p>
+                    <p class="font-bold text-lg text-indigo-600 mb-1 cursor-pointer hover:underline" onclick="openProfile('${r.student_id}', 'student')">${r.student_name}</p>
                     <p class="text-sm text-gray-500 mb-2"><i class="fas fa-graduation-cap"></i> ${r.department} • Year: ${r.year}</p>
                     <p class="text-sm text-gray-700 dark:text-gray-300 mb-2"><strong>Goal:</strong> ${r.goal}</p>
                     <p class="text-sm text-gray-700 dark:text-gray-300 mb-4"><strong>Skills:</strong> ${r.skills}</p>
@@ -2340,7 +2567,7 @@ async function loadMentorshipDashboard() {
                         <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-bl-full transform translate-x-8 -translate-y-8 group-hover:scale-110 transition duration-500"></div>
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h5 class="font-bold text-xl text-gray-900 dark:text-white mb-1"><i class="fas fa-user-graduate text-indigo-500 mr-2"></i>${c.student_name}</h5>
+                                <h5 class="font-bold text-xl text-indigo-600 dark:text-indigo-400 mb-1 cursor-pointer hover:underline" onclick="openProfile('${c.student_id}', 'student')"><i class="fas fa-user-graduate text-indigo-500 mr-2"></i>${c.student_name}</h5>
                                 <p class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full inline-block mt-1">Mentee</p>
                             </div>
                             <div class="flex gap-2">
@@ -2369,25 +2596,35 @@ async function loadMentorshipDashboard() {
         const conData = await conRes.json();
 
         if (conData.success && conData.connections.length > 0) {
-            const activeConnection = conData.connections[0];
+            const activeConnection = conData.connections[0]; // Retaining for tasks/progress default load
             document.getElementById('progress-connection-id').value = activeConnection.id;
 
-            document.getElementById('mentorship-mentor-container').innerHTML = `
-                <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-inner">
-                            ${activeConnection.alumni_name.charAt(0)}
+            const mentorContainer = document.getElementById('mentorship-mentor-container');
+            mentorContainer.style.maxHeight = '350px';
+            mentorContainer.style.overflowY = 'auto';
+            mentorContainer.classList.add('space-y-4');
+
+            mentorContainer.innerHTML = conData.connections.map(conn => `
+                <div class="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm gap-4">
+                    <div class="flex items-center gap-4 w-full sm:w-auto">
+                        <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-inner flex-shrink-0">
+                            ${conn.alumni_name.charAt(0)}
                         </div>
                         <div>
-                            <p class="font-bold text-xl text-gray-900 dark:text-white">${activeConnection.alumni_name}</p>
-                            <span class="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-md mt-1"><i class="fas fa-shield-check"></i> Connected Mentor</span>
+                            <p class="font-bold text-xl text-indigo-600 dark:text-indigo-400 cursor-pointer hover:underline" onclick="openProfile('${conn.alumni_id}', 'alumni')">${conn.alumni_name}</p>
+                            <span class="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-md mt-1"><i class="fas fa-shield-check"></i> Connected Alumni Mentor</span>
                         </div>
                     </div>
-                    <button onclick="openChat('${activeConnection.id}', '${activeConnection.alumni_id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
-                        <i class="fas fa-comments mr-2"></i> Message
-                    </button>
+                    <div class="flex gap-2 w-full sm:w-auto justify-end">
+                        <button onclick="openProfile('${conn.alumni_id}', 'alumni')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-300 px-4 py-2 rounded-lg font-semibold transition-all shadow-sm">
+                            View Profile
+                        </button>
+                        <button onclick="openChat('${conn.id}', '${conn.alumni_id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                            <i class="fas fa-comments mr-2"></i> Message
+                        </button>
+                    </div>
                 </div>
-            `;
+            `).join('');
 
             // Load Tasks
             const taskRes = await fetch('/api/mentorship/tasks?connection_id=' + activeConnection.id);
