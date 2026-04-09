@@ -1,6 +1,6 @@
 # app.py
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, redirect
 from flask_cors import CORS
 import os
 import random
@@ -30,6 +30,8 @@ mentorship_slots_collection = None
 resources_collection = None
 confidence_corner_posts_collection = None
 reports_collection = None  # 1. Make sure it's declared here
+mentorship_connections_collection = None
+messages_collection = None
 
 try:
     client = MongoClient(DATABASE_URL)
@@ -42,6 +44,8 @@ try:
     
     # 2. THIS IS THE MISSING LINE! Connect it to the database:
     reports_collection = db.reports 
+    mentorship_connections_collection = db.mentorship_connections
+    messages_collection = db.messages
     
     users_collection.create_index("email", unique=True)
     print(f"Successfully connected to MongoDB: {DB_NAME}")
@@ -73,11 +77,51 @@ def doc_to_dict(doc):
 
     return doc_dict
 
+# --- Helper: Recent activity friendly timestamp ---
+
+def format_time_ago(dt):
+    if not isinstance(dt, datetime):
+        return 'Just now'
+    diff = datetime.now() - dt
+    seconds = diff.total_seconds()
+    if seconds < 60:
+        return 'Just now'
+    if seconds < 3600:
+        minutes = int(seconds // 60)
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    if seconds < 86400:
+        hours = int(seconds // 3600)
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    days = int(seconds // 86400)
+    if days < 7:
+        return f"{days} day{'s' if days != 1 else ''} ago"
+    return dt.strftime('%Y-%m-%d')
+
 # --- Routes ---
 
 @app.route('/')
 def index():
+    if current_user:
+        if current_user.get('type') == 'student':
+            return redirect('/student/dashboard')
+        elif current_user.get('type') == 'alumni':
+            return redirect('/alumni/dashboard')
     return render_template('index.html')
+
+@app.route('/student/dashboard')
+@app.route('/alumni/dashboard')
+def dashboard_route():
+    if not current_user:
+        return redirect('/')
+    if request.path == '/student/dashboard' and current_user.get('type') != 'student':
+        return redirect('/')
+    if request.path == '/alumni/dashboard' and current_user.get('type') != 'alumni':
+        return redirect('/')
+    return render_template('index.html')
+
+@app.route('/chat')
+def chat_route():
+    return render_template('chat.html')
 
 @app.route('/script/<path:filename>')
 def serve_script_static(filename):
@@ -149,14 +193,90 @@ def simulate_match():
         return jsonify({"match": match, "success": True}), 200
     return jsonify({"message": "No match found.", "success": False}), 200
 
+@app.route('/api/profile', methods=['GET'])
+def get_profile():
+    global current_user
+    if not current_user:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    user_doc = users_collection.find_one({"_id": ObjectId(current_user['id'])})
+    if not user_doc:
+        return jsonify({"success": False, "message": "User not found"}), 404
+    current_user = doc_to_dict(user_doc)
+    return jsonify({"user": current_user, "success": True}), 200
+
+
 @app.route('/api/profile', methods=['PUT'])
 def update_profile():
     global current_user
-    if not current_user: return jsonify({"success": False}), 401
+    if not current_user:
+        return jsonify({"success": False}), 401
     data = request.get_json()
-    users_collection.update_one({"_id": ObjectId(current_user['id'])}, {"$set": data})
-    current_user = doc_to_dict(users_collection.find_one({"_id": ObjectId(current_user['id'])}))
+    valid_fields = [
+        'hometown', 'language', 'profession', 'company_name', 'designation', 'experience_years',
+        'company_location', 'bio', 'skills', 'available_for', 'linkedin', 'github', 'portfolio',
+        'profile_image'
+    ]
+    update_data = {k: v for k, v in data.items() if k in valid_fields}
+    if update_data:
+        users_collection.update_one({"_id": ObjectId(current_user['id'])}, {"$set": update_data})
+        current_user = doc_to_dict(users_collection.find_one({"_id": ObjectId(current_user['id'])}))
     return jsonify({"user": current_user, "success": True}), 200
+
+
+@app.route('/api/profile/upload-photo', methods=['POST'])
+def upload_profile_photo():
+    global current_user
+    if not current_user:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    if 'profile_image' not in request.files:
+        return jsonify({"success": False, "message": "No file uploaded"}), 400
+
+    file = request.files['profile_image']
+    if file.filename == '':
+        return jsonify({"success": False, "message": "No file selected"}), 400
+
+    allowed_ext = {'png', 'jpg', 'jpeg'}
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+    if ext not in allowed_ext:
+        return jsonify({"success": False, "message": "Only JPG and PNG are allowed"}), 400
+
+    save_name = f"{current_user['id']}_profile.{ext}"
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], save_name)
+    file.save(file_path)
+
+    profile_image_url = f"/uploads/{save_name}"
+    users_collection.update_one({"_id": ObjectId(current_user['id'])}, {"$set": {"profile_image": profile_image_url}})
+    current_user['profile_image'] = profile_image_url
+
+    return jsonify({"success": True, "profile_image": profile_image_url, "user": current_user}), 200
+
+
+@app.route('/api/profile/remove-photo', methods=['POST'])
+def remove_profile_photo():
+    global current_user
+    if not current_user:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    user_doc = users_collection.find_one({"_id": ObjectId(current_user['id'])})
+    if user_doc and user_doc.get('profile_image'):
+        existing = user_doc.get('profile_image')
+        if existing.startswith('/uploads/'):
+            path = existing.replace('/uploads/', '')
+            full_path = os.path.join(app.config['UPLOAD_FOLDER'], path)
+            if os.path.exists(full_path):
+                try:
+                    os.remove(full_path)
+                except Exception:
+                    pass
+
+    users_collection.update_one({"_id": ObjectId(current_user['id'])}, {"$unset": {"profile_image": ''}})
+    current_user['profile_image'] = None
+
+    return jsonify({"success": True, "message": "Profile photo removed", "user": current_user}), 200
+
 
 # --- Resource Bank ---
 
@@ -306,13 +426,27 @@ def get_storyboards():
 
 @app.route('/api/alumni', methods=['GET'])
 def search_alumni():
+    global current_user
+    req_user = request.args.get('user_id') or (current_user['id'] if current_user else None)
     search_term = request.args.get('search', '').lower()
+    
+    exclude_alumni_ids = set()
+    if req_user:
+        student_id = ObjectId(req_user)
+        for r in db.mentorship_requests.find({"student_id": student_id, "status": {"$in": ["pending", "accepted"]}}):
+            exclude_alumni_ids.add(str(r['alumni_id']))
+        for c in db.mentorship_connections.find({"student_id": student_id}):
+            exclude_alumni_ids.add(str(c['alumni_id']))
+
     alumni_list = list(users_collection.find({"type": "alumni"}))
     
     results = []
     now = datetime.now()
     
     for al in alumni_list:
+        if str(al['_id']) in exclude_alumni_ids:
+            continue
+            
         name = al.get('name', '').lower()
         prof = (al.get('profession') or '').lower()
         
@@ -353,11 +487,7 @@ def submit_feedback(slot_id):
 
     return jsonify({"success": True, "message": "Thank you for your feedback!"}), 201
 
-@app.route('/impact-tracker-dummy-content')
-def serve_impact_tracker_dummy_content():
-    file_path = os.path.join(app.root_path, app.template_folder, 'impact_tracker_dummy.html')
-    with open(file_path, 'r', encoding='utf-8') as f:
-        return re.search(r'<main[^>]*>(.*?)</main>', f.read(), re.DOTALL).group(1)
+
 
 # --- Phase 3: Moderation & Reporting ---
 
@@ -434,6 +564,449 @@ def ping():
         )
     return jsonify({"success": True})
 
+# --- Job Opportunities ---
+
+@app.route('/api/jobs', methods=['GET'])
+def get_jobs():
+    docs = list(db.jobs.find().sort("created_at", -1))
+    return jsonify({"jobs": [doc_to_dict(d) for d in docs], "success": True}), 200
+
+@app.route('/api/jobs', methods=['POST'])
+def create_job():
+    global current_user
+    if not current_user or current_user['type'] != 'alumni':
+        return jsonify({"success": False, "message": "Only alumni can post jobs."}), 403
+    
+    data = request.get_json()
+    new_job = {
+        "alumni_id": ObjectId(current_user['id']),
+        "alumni_name": current_user['name'],
+        "title": data.get('title'),
+        "company": data.get('company'),
+        "location": data.get('location'),
+        "type": data.get('type'),
+        "description": data.get('description'),
+        "application_link": data.get('application_link'),
+        "contact_email": data.get('contact_email'),
+        "experience_level": data.get('experience_level'),
+        "required_skills": data.get('required_skills'),
+        "compensation_type": data.get('compensation_type'),
+        "salary_range": data.get('salary_range'),
+        "application_deadline": data.get('application_deadline'),
+        "joining_date": data.get('joining_date'),
+        "created_at": datetime.now()
+    }
+    
+    db.jobs.insert_one(new_job)
+    return jsonify({"success": True, "message": "Job posted successfully!"}), 201
+
+@app.route('/api/jobs/<job_id>/apply', methods=['POST'])
+def apply_job(job_id):
+    global current_user
+    if not current_user or current_user['type'] != 'student':
+        return jsonify({"success": False, "message": "Only students can apply for jobs."}), 403
+
+    existing = db.applications.find_one({"job_id": ObjectId(job_id), "student_id": ObjectId(current_user['id'])})
+    if existing:
+        return jsonify({"success": False, "message": "You have already applied for this position."}), 400
+
+    new_app = {
+        "job_id": ObjectId(job_id),
+        "student_id": ObjectId(current_user['id']),
+        "student_name": current_user['name'],
+        "applied_at": datetime.now()
+    }
+    db.applications.insert_one(new_app)
+    return jsonify({"success": True, "message": "Application submitted successfully!"}), 200
+
+# --- Mentorship System ---
+
+@app.route('/api/mentorship/request', methods=['POST'])
+def create_mentorship_request():
+    global current_user
+    if not current_user or current_user['type'] != 'student':
+        return jsonify({"success": False, "message": "Only students can request mentorship."}), 403
+        
+    data = request.get_json()
+    new_req = {
+        "student_id": ObjectId(current_user['id']),
+        "student_name": current_user['name'],
+        "alumni_id": ObjectId(data.get('alumni_id')),
+        "department": data.get('department'),
+        "year": data.get('year'),
+        "skills": data.get('skills'),
+        "goal": data.get('goal'),
+        "preferred_duration": data.get('preferred_duration'),
+        "status": "pending",
+        "created_at": datetime.now()
+    }
+    db.mentorship_requests.insert_one(new_req)
+    return jsonify({"success": True, "message": "Mentorship request sent successfully."}), 201
+
+@app.route('/api/mentorship/requests', methods=['GET'])
+def get_mentorship_requests():
+    global current_user
+    if not current_user or current_user['type'] != 'alumni':
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        
+    reqs = list(db.mentorship_requests.find({"alumni_id": ObjectId(current_user['id']), "status": "pending"}).sort("created_at", -1))
+    return jsonify({"requests": [doc_to_dict(req) for req in reqs], "success": True}), 200
+
+@app.route('/api/mentorship/request/<req_id>/respond', methods=['POST'])
+def respond_mentorship_request(req_id):
+    global current_user
+    if not current_user or current_user['type'] != 'alumni':
+        return jsonify({"success": False}), 403
+        
+    data = request.get_json()
+    status = data.get('status')
+    
+    req = db.mentorship_requests.find_one({"_id": ObjectId(req_id), "alumni_id": ObjectId(current_user['id'])})
+    if not req:
+        return jsonify({"success": False, "message": "Request not found."}), 404
+        
+    db.mentorship_requests.update_one({"_id": ObjectId(req_id)}, {"$set": {"status": status}})
+    
+    if status == 'accepted':
+        db.mentorship_connections.insert_one({
+            "student_id": req['student_id'],
+            "student_name": req['student_name'],
+            "alumni_id": req['alumni_id'],
+            "alumni_name": current_user['name'],
+            "status": "accepted",
+            "created_at": datetime.now()
+        })
+        
+    return jsonify({"success": True, "message": f"Request {status}."}), 200
+
+@app.route('/api/mentorship/connections', methods=['GET'])
+def get_mentorship_connections():
+    global current_user
+    if not current_user:
+        return jsonify({"success": False}), 403
+        
+    query = {"alumni_id": ObjectId(current_user['id'])} if current_user['type'] == 'alumni' else {"student_id": ObjectId(current_user['id'])}
+    conns = list(db.mentorship_connections.find(query).sort("created_at", -1))
+    return jsonify({"connections": [doc_to_dict(c) for c in conns], "success": True}), 200
+
+@app.route('/api/dashboard/recent-activity', methods=['GET'])
+def dashboard_recent_activity():
+    global current_user
+    if not current_user or current_user['type'] != 'alumni':
+        return jsonify({"message": "Unauthorized", "success": False}), 403
+
+    alumni_id = ObjectId(current_user['id'])
+    activities = []
+
+    # New mentorship requests
+    mentorship_requests = list(db.mentorship_requests.find({"alumni_id": alumni_id}).sort("created_at", -1).limit(10))
+    for req in mentorship_requests:
+        student_name = req.get('student_name', 'A student')
+        created_at = req.get('created_at', datetime.now())
+        activities.append({
+            'type': 'mentorship_request',
+            'message': f"{student_name} requested mentorship",
+            'time': format_time_ago(created_at),
+            'created_at': created_at
+        })
+
+    # Task completed by students
+    completed_tasks = list(db.tasks.find({"alumni_id": alumni_id, "status": "completed"}).sort("created_at", -1).limit(10))
+    for task in completed_tasks:
+        student_name = task.get('student_name', 'A student')
+        task_title = task.get('task_title', 'a task')
+        created_at = task.get('completed_at') or task.get('created_at') or datetime.now()
+        activities.append({
+            'type': 'task_completed',
+            'message': f"{student_name} completed {task_title}",
+            'time': format_time_ago(created_at),
+            'created_at': created_at
+        })
+
+    # New mentorship connections
+    mentorship_connections = list(db.mentorship_connections.find({"alumni_id": alumni_id}).sort("created_at", -1).limit(10))
+    for conn in mentorship_connections:
+        student_name = conn.get('student_name', 'A mentee')
+        created_at = conn.get('created_at', datetime.now())
+        activities.append({
+            'type': 'mentorship_connection',
+            'message': f"{student_name} joined your mentorship", 
+            'time': format_time_ago(created_at),
+            'created_at': created_at
+        })
+
+    # Optional: New job applications
+    try:
+        job_applications = list(db.applications.find({"alumni_id": alumni_id}).sort("applied_at", -1).limit(10))
+    except Exception:
+        job_applications = []
+
+    for app in job_applications:
+        student_name = app.get('student_name', 'A student')
+        created_at = app.get('applied_at', datetime.now())
+        activities.append({
+            'type': 'job_application',
+            'message': f"{student_name} applied to your job",
+            'time': format_time_ago(created_at),
+            'created_at': created_at
+        })
+
+    # Sort and limit results
+    activities = sorted(activities, key=lambda x: x['created_at'], reverse=True)[:5]
+    # Remove created_at before returning
+    recent_activities = [{k: v for k, v in act.items() if k != 'created_at'} for act in activities]
+
+    return jsonify({"recent_activity": recent_activities, "success": True}), 200
+
+
+@app.route('/api/dashboard/upcoming-sessions', methods=['GET'])
+def dashboard_upcoming_sessions():
+    global current_user
+    if not current_user or current_user['type'] != 'alumni':
+        return jsonify({"message": "Unauthorized", "success": False}), 403
+
+    alumni_id = ObjectId(current_user['id'])
+    now = datetime.now()
+    slots = list(mentorship_slots_collection.find({
+        "alumni_id": alumni_id,
+        "is_booked": True,
+        "start_time": {"$gt": now}
+    }).sort("start_time", 1))
+
+    upcoming = []
+    for slot in slots:
+        start = slot.get('start_time')
+        if not isinstance(start, datetime):
+            continue
+        upcoming.append({
+            'student_name': slot.get('student_name', 'Booked Student'),
+            'date': start.strftime('%Y-%m-%d'),
+            'time': start.strftime('%I:%M %p').lstrip('0'),
+            'meeting_link': slot.get('meeting_link', '')
+        })
+
+    return jsonify({"upcoming_sessions": upcoming, "success": True}), 200
+
+
+@app.route('/api/mentorship/task', methods=['POST'])
+def assign_task():
+    global current_user
+    if not current_user or current_user['type'] != 'alumni':
+        return jsonify({"success": False}), 403
+        
+    data = request.get_json()
+    new_task = {
+        "connection_id": data.get('connection_id'),
+        "alumni_id": ObjectId(current_user['id']),
+        "task_title": data.get('task_title'),
+        "description": data.get('description'),
+        "deadline": data.get('deadline'),
+        "priority": data.get('priority'),
+        "status": "pending",
+        "created_at": datetime.now()
+    }
+    db.tasks.insert_one(new_task)
+    return jsonify({"success": True, "message": "Task assigned."}), 201
+
+@app.route('/api/mentorship/tasks', methods=['GET'])
+def get_tasks():
+    connection_id = request.args.get('connection_id')
+    tasks = list(db.tasks.find({"connection_id": connection_id}).sort("created_at", -1))
+    return jsonify({"tasks": [doc_to_dict(t) for t in tasks], "success": True}), 200
+
+@app.route('/api/mentorship/task/<task_id>/complete', methods=['POST'])
+def complete_task(task_id):
+    global current_user
+    if not current_user or current_user['type'] != 'student':
+        return jsonify({"success": False}), 403
+        
+    data = request.get_json()
+    db.tasks.update_one(
+        {"_id": ObjectId(task_id)},
+        {"$set": {
+            "status": "completed", 
+            "completion_notes": data.get('completion_notes'),
+            "submission_link": data.get('submission_link'),
+            "completed_at": datetime.now()
+        }}
+    )
+    return jsonify({"success": True, "message": "Task marked complete."}), 200
+
+@app.route('/api/mentorship/progress', methods=['POST'])
+def submit_progress():
+    global current_user
+    if not current_user or current_user['type'] != 'student':
+        return jsonify({"success": False}), 403
+        
+    data = request.get_json()
+    new_prog = {
+        "connection_id": data.get('connection_id'),
+        "student_id": ObjectId(current_user['id']),
+        "task_id": data.get('task_id'),
+        "progress_text": data.get('progress_text'),
+        "date": data.get('date', datetime.now().strftime('%Y-%m-%d')),
+        "created_at": datetime.now()
+    }
+    db.progress_updates.insert_one(new_prog)
+    return jsonify({"success": True, "message": "Progress submitted."}), 201
+
+@app.route('/api/mentorship/progress', methods=['GET'])
+def get_progress():
+    connection_id = request.args.get('connection_id')
+    logs = list(db.progress_updates.find({"connection_id": connection_id}).sort("created_at", -1))
+    return jsonify({"progress": [doc_to_dict(l) for l in logs], "success": True}), 200
+
+# --- Chat Routes ---
+
+@app.route('/api/chat/send', methods=['POST'])
+def send_message():
+    global current_user
+    try:
+        data = request.get_json()
+        sender_id = data.get('sender_id') or (current_user['id'] if current_user else None)
+        if not sender_id:
+            return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+        connection_id = data.get('connection_id')
+        receiver_id = data.get('receiver_id')
+        message = data.get('message')
+
+        if not connection_id or not receiver_id or not message:
+            return jsonify({"success": False, "message": "Missing required fields"}), 400
+
+        # Check if connection exists and is accepted
+        connection = mentorship_connections_collection.find_one({
+            "_id": ObjectId(connection_id),
+            "$or": [
+                {"student_id": ObjectId(sender_id), "alumni_id": ObjectId(receiver_id)},
+                {"alumni_id": ObjectId(sender_id), "student_id": ObjectId(receiver_id)}
+            ],
+            "status": "accepted"
+        })
+
+        if not connection:
+            return jsonify({"success": False, "message": "Invalid connection or not authorized"}), 403
+
+        # Insert message
+        message_doc = {
+            "connection_id": ObjectId(connection_id),
+            "sender_id": ObjectId(sender_id),
+            "receiver_id": ObjectId(receiver_id),
+            "message": message,
+            "timestamp": datetime.now(),
+            "is_read": False
+        }
+
+        result = messages_collection.insert_one(message_doc)
+        return jsonify({"success": True, "message": "Message sent", "message_id": str(result.inserted_id)}), 201
+    except Exception as e:
+        print(f"Error sending message: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+@app.route('/api/chat/messages/<connection_id>', methods=['GET'])
+def get_messages(connection_id):
+    global current_user
+    req_user = request.args.get('user_id') or (current_user['id'] if current_user else None)
+    if not req_user:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    try:
+        # Validate connection_id format
+        if not connection_id or not all(c in '0123456789abcdef' for c in connection_id.lower()):
+            return jsonify({"success": False, "message": "Invalid connection ID format"}), 400
+
+        # Check if user is part of the connection
+        connection = mentorship_connections_collection.find_one({
+            "_id": ObjectId(connection_id),
+            "$or": [
+                {"student_id": ObjectId(req_user)},
+                {"alumni_id": ObjectId(req_user)}
+            ],
+            "status": "accepted"
+        })
+
+        if not connection:
+            return jsonify({"success": False, "message": "Invalid connection or not authorized"}), 403
+
+        messages = list(messages_collection.find({"connection_id": ObjectId(connection_id)}).sort("timestamp", 1))
+        messages_list = []
+        for msg in messages:
+            messages_list.append({
+                "sender_id": str(msg['sender_id']),
+                "message": msg['message'],
+                "timestamp": msg['timestamp'].isoformat() if isinstance(msg['timestamp'], datetime) else msg['timestamp']
+            })
+
+        return jsonify({"messages": messages_list, "success": True}), 200
+    except Exception as e:
+        print(f"Error fetching messages: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+@app.route('/api/chat/conversations', methods=['GET'])
+def get_conversations():
+    global current_user
+    req_user = request.args.get('user_id') or (current_user['id'] if current_user else None)
+    if not req_user:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    user_id = ObjectId(req_user)
+    connections = list(mentorship_connections_collection.find({
+        "$or": [
+            {"student_id": user_id},
+            {"alumni_id": user_id}
+        ],
+        "status": "accepted"
+    }))
+
+    conversations = []
+    for conn in connections:
+        other_user_id = conn['alumni_id'] if conn['student_id'] == user_id else conn['student_id']
+        other_user = users_collection.find_one({"_id": other_user_id})
+        if other_user:
+            # Get last message
+            last_msg = messages_collection.find_one(
+                {"connection_id": conn['_id']},
+                sort=[("timestamp", -1)]
+            )
+            last_message = last_msg['message'] if last_msg else "No messages yet"
+            conversations.append({
+                "connection_id": str(conn['_id']),
+                "other_user": doc_to_dict(other_user),
+                "last_message": last_message
+            })
+
+    return jsonify({"conversations": conversations, "success": True}), 200
+
+@app.route('/api/chat/connections', methods=['GET'])
+def get_chat_connections():
+    global current_user
+    req_user = request.args.get('user_id') or (current_user['id'] if current_user else None)
+    if not req_user:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    user_id = ObjectId(req_user)
+    connections = list(mentorship_connections_collection.find({
+        "$or": [
+            {"student_id": user_id},
+            {"alumni_id": user_id}
+        ],
+        "status": "accepted"
+    }))
+
+    chat_connections = []
+    for conn in connections:
+        other_user_id = conn['alumni_id'] if conn['student_id'] == user_id else conn['student_id']
+        other_user = users_collection.find_one({"_id": other_user_id})
+        if other_user:
+            chat_connections.append({
+                "connection_id": str(conn['_id']),
+                "user_id": str(other_user_id),
+                "name": other_user['name'],
+                "role": other_user['type'],
+                "profile_image": other_user.get('profile_image')
+            })
+
+    return jsonify({"connections": chat_connections, "success": True}), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

@@ -1,0 +1,66 @@
+/* Chat Styles */
+
+#messages-container {
+    max-height: calc(100vh - 300px);
+}
+
+#conversations-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#conversations-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#conversations-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+#conversations-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+#messages-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#messages-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#messages-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+#messages-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Dark mode scrollbars */
+.dark #conversations-list::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark #conversations-list::-webkit-scrollbar-thumb {
+    background: #6b7280;
+}
+
+.dark #conversations-list::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+.dark #messages-container::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark #messages-container::-webkit-scrollbar-thumb {
+    background: #6b7280;
+}
+
+.dark #messages-container::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
