@@ -1,134 +1,187 @@
-# 🎓 UniVerge – Student Alumni Bridge Platform
-
-UniVerge is a **full-stack web platform** that connects **students and alumni** for mentorship, networking, and career guidance.
-The platform integrates **modern backend technologies, dual databases, blockchain**, and **machine learning** to create a secure and intelligent academic networking system.
+# UniVerge — Alumni-Student Mentorship & Opportunity Platform
 
 ---
 
-## 📋 Overview
+## Project Description
 
-UniVerge bridges the gap between students and alumni by enabling:
-
-- Mentor–mentee connections
-- Career guidance and professional networking
-- Secure credential verification using blockchain
-- Smart matching powered by machine learning
-
-Built as a **hackathon-ready, scalable full-stack application**.
+UniVerge is a mentorship and networking platform designed to connect students with alumni for guidance, job opportunities, and skill development. The platform enables structured mentorship, one-to-one chat, task tracking, job postings, and professional profile discovery.
 
 ---
 
-## ✨ Key Features
+## Current Features Implemented
 
-- ✅ Student & Alumni registration and profile management
-- ✅ Smart mentor–student matching using ML
-- ✅ Real-time messaging system
-- ✅ Community forum for discussions
-- ✅ Blockchain-based credential storage & verification
-- ✅ Analytics-ready backend architecture
+### Authentication & Role-Based Access
 
----
-
-## 🛠️ Tech Stack
-
-### Backend
-- Flask 2.3.3
-- Python 3.8+
-
-### Databases
-- PostgreSQL – User data & profiles
-- MongoDB – Chat & messaging data
-
-### Blockchain
-- Web3.py
-- IPFS – Credential verification
-
-### ML / AI
-- Scikit-learn – Intelligent user matching
-
-### Frontend
-- HTML
-- CSS
-- JavaScript
+* Student Login & Signup
+* Alumni Login & Signup
+* Role-based dashboard (Student / Alumni)
 
 ---
 
-## 📁 Project Structure
+### Student Features
 
-UniVerge/
-├── app.py               # Main Flask application
-├── requirements.txt     # Project dependencies
-├── static/              # CSS, JavaScript, images
-├── templates/           # HTML templates
-├── models/              # Database models
-└── services/            # Business logic & services
-
----
-
-## 🚀 Quick Setup
-
-### 1️⃣ Installation
-
-git clone https://github.com/iamkrishna27/UniVerge-mackathon1.0.git
-cd UniVerge-mackathon1.0
-pip install -r requirements.txt
+* View Alumni Directory
+* Send Mentorship Request
+* View Connected Mentors
+* Mentorship Hub (Multiple Mentors with Scroll Support)
+* One-to-One Chat with Connected Alumni
+* Task Updates Submission
+* View Assigned Tasks
+* View Alumni Stories
+* Job Board Access
+* Confidence & Resources Sections
+* Clickable Alumni Profiles (LinkedIn-style)
 
 ---
 
-### 2️⃣ Database Setup
+### Alumni Features
 
-PostgreSQL:
-CREATE DATABASE univerge_db;
-
-MongoDB:
-mongod --dbpath ./data
-
----
-
-### 3️⃣ Run the Application
-
-python app.py
-
-Access the application at:
-http://localhost:5000
+* View Student Requests
+* Accept / Reject Mentorship Requests
+* Assign Tasks to Mentees
+* Track Student Progress
+* One-to-One Chat with Students
+* Post Stories
+* Offer Job Opportunities (Job Board)
+* View Assigned Mentees
+* Clickable Student Profiles (LinkedIn-style)
 
 ---
 
-## 🌐 Environment Variables (.env)
+### Public Profile Feature (LinkedIn-Style)
 
-DATABASE_URL=postgresql://user:password@localhost/univerge_db
-MONGO_URI=mongodb://localhost:27017/univerge_chat
-SECRET_KEY=your-secret-key
-BLOCKCHAIN_RPC_URL=https://your.rpc.node
-
----
-
-## 📊 API Endpoints
-
-POST /auth/register – User registration
-POST /auth/login – User login
-GET /api/alumni – Fetch alumni list
-POST /chat/send – Send chat message
-GET /forum/posts – Retrieve forum posts
+* Click Student / Alumni Name
+* View Detailed Profile
+  * Profile Photo
+  * Bio
+  * Skills
+  * Experience (Alumni)
+  * Career Interests (Student)
+  * LinkedIn / GitHub Links
+  * Connect / Message Buttons
 
 ---
 
-## 🎯 Hackathon Submission
+### Chat System
 
-This project demonstrates:
-
-- Full-stack development skills
-- Dual-database architecture (SQL + NoSQL)
-- Blockchain integration for secure credentials
-- Machine learning for smart matching
-- Scalable backend design
+* One-to-One Chat
+* Auto Load Connected Users
+* Message Button Redirect
+* Real-Time Conversation Interface
 
 ---
 
-## 📞 Contact & Links
+### Mentorship System
 
-GitHub:
-https://github.com/iamkrishna27/UniVerge-mackathon1.0
+* Student sends request
+* Alumni accepts/rejects
+* Multiple mentors supported
+* Scrollable mentor list
+* Task assignment
+* Daily progress tracking
 
-Hackathon:
-UniVerge Mackathon 1.0 Submission
+---
+
+### Job Board
+
+* Alumni post job opportunities
+* Students view opportunities
+* Centralized job listings
+
+---
+
+### Stories Feature
+
+* Alumni share experience
+* Students learn from stories
+* Weekly story highlight (planned)
+
+---
+
+### Dashboard Features
+
+**Student Dashboard:**
+
+* My Mentors
+* Assigned Tasks
+* Recent Updates
+* Stories Feed
+
+**Alumni Dashboard:**
+
+* Assigned Mentees
+* Task Tracker
+* Recent Activity
+* Message & Assign Task Buttons
+
+---
+
+### Profile Features
+
+* Upload Profile Photo
+* Edit Profile Information
+* Professional Bio
+* Skills Section
+* LinkedIn / GitHub Links
+* Clickable Public Profiles
+
+---
+
+## Features Currently In Progress
+
+* Leaderboard (Most Active Alumni)
+* Story of the Week
+* Achievements System
+* Notification System
+* Sidebar Navigation (Planned)
+
+---
+
+## Tech Stack
+
+**Frontend:**
+
+* HTML
+* CSS
+* JavaScript
+
+**Backend:**
+
+* Python (Flask)
+
+**Database:**
+
+* MongoDB
+
+---
+
+## Project Structure
+
+* `app.py` — Backend Flask Server
+* `templates / index.html` — Frontend UI
+* `static / script.js` — Frontend Logic
+* `static / styles.css` — UI Styling
+
+---
+
+## Future Enhancements
+
+* Leaderboard
+* Notification System
+* Video Call Mentorship
+* Resume Review Section
+* Event System
+* Alumni Hiring Dashboard
+
+---
+
+## Contributors
+
+* Krishna N
+
+---
+
+## Status
+
+**Project Status:** In Active Development  
+**Current Phase:** Feature Expansion & UI Enhancement
