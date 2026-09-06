@@ -382,6 +382,32 @@
                 </div>
             </div>
 
+            <!-- Leaderboard & Story of the Week -->
+            <div id="dashboard-engagement-section" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 mb-8 animate-slide-up animation-delay-700">
+                <!-- Monthly Top Alumni -->
+                <div class="card-enhanced p-6">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-trophy text-yellow-500"></i> Monthly Top Alumni
+                    </h3>
+                    <div id="dashboard-leaderboard-container" class="space-y-4">
+                        <p class="text-gray-500 text-sm">Loading leaderboard...</p>
+                    </div>
+                    <button onclick="showPage('leaderboard')" class="w-full mt-6 btn-secondary-gradient py-2 rounded-xl text-sm font-semibold hover:shadow-lg transition">
+                        View Full Leaderboard
+                    </button>
+                </div>
+                
+                <!-- Story of the Week -->
+                <div class="card-enhanced p-6">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-star text-pink-500"></i> Story of the Week
+                    </h3>
+                    <div id="dashboard-story-of-week-container">
+                        <p class="text-gray-500 text-sm">Loading story...</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Mentorship Hub (Dynamic) -->
             <div id="mentorship-hub-section" class="mb-8 hidden animate-slide-up">
                 <div class="flex justify-between items-end mb-4">
@@ -629,6 +655,20 @@
 
                 <div id="public-profile-content" class="card-enhanced p-8 animate-slide-up hidden">
                     <!-- Dynamic content will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== LEADERBOARD PAGE ==================== -->
+        <div id="leaderboard-page" class="page-content hidden">
+            <div class="text-center mb-10 animate-slide-up">
+                <h1 class="text-4xl md:text-5xl font-black mb-4">🏆 Monthly Alumni Leaderboard</h1>
+                <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Celebrating our most active alumni mentors making a difference!</p>
+            </div>
+            
+            <div class="max-w-4xl mx-auto card-enhanced p-8 animate-slide-up animation-delay-100">
+                <div id="full-leaderboard-container" class="space-y-4">
+                    <p class="text-gray-500 text-center">Loading leaderboard...</p>
                 </div>
             </div>
         </div>

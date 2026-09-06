@@ -10,10 +10,13 @@ from bson.objectid import ObjectId
 import re
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
 
+load_dotenv()
 # --- Database Configuration ---
-DATABASE_URL = "mongodb+srv://krishna:destroyer1357@smartnav.uz1gfre.mongodb.net/univerge_data?retryWrites=true&w=majority"
+#DATABASE_URL = "mongodb+srv://krishna:destroyer1357@smartnav.uz1gfre.mongodb.net/univerge_data?retryWrites=true&w=majority"
 DB_NAME = 'univerge_data'
+
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -34,7 +37,7 @@ mentorship_connections_collection = None
 messages_collection = None
 
 try:
-    client = MongoClient(DATABASE_URL)
+    client = MongoClient(os.getenv('MONGO_URI'))
     db = client[DB_NAME]
     
     users_collection = db.users
@@ -76,6 +79,19 @@ def doc_to_dict(doc):
         doc_dict['created_at'] = doc_dict['created_at'].isoformat()
 
     return doc_dict
+
+# --- Helper: Activity Points Tracker ---
+
+def add_alumni_points(alumni_id, points):
+    try:
+        if isinstance(alumni_id, str):
+            alumni_id = ObjectId(alumni_id)
+        users_collection.update_one(
+            {"_id": alumni_id, "type": "alumni"},
+            {"$inc": {"activity_points": points, "monthly_points": points}}
+        )
+    except Exception as e:
+        print(f"Error adding points: {e}")
 
 # --- Helper: Recent activity friendly timestamp ---
 
@@ -492,10 +508,14 @@ def create_story():
         "story_title": data.get('title'),
         "story": data.get('description'),
         "image_url": data.get('image_url', ''), 
+        "likes": 0,
+        "engagement_count": 0,
+        "is_story_of_week": False,
         "created_at": datetime.now()
     }
     
-    db.stories.insert_one(new_story) 
+    db.stories.insert_one(new_story)
+    add_alumni_points(current_user['id'], 4)
     return jsonify({"success": True, "message": "Story published!"}), 201
 
 @app.route('/api/storyboards', methods=['GET'])
@@ -565,6 +585,10 @@ def submit_feedback(slot_id):
     
     db.feedback.insert_one(feedback_doc)
     mentorship_slots_collection.update_one({"_id": ObjectId(slot_id)}, {"$set": {"is_reviewed": True}})
+
+    slot = mentorship_slots_collection.find_one({"_id": ObjectId(slot_id)})
+    if slot and slot.get('alumni_id'):
+        add_alumni_points(slot['alumni_id'], 3)
 
     return jsonify({"success": True, "message": "Thank you for your feedback!"}), 201
 
@@ -679,6 +703,7 @@ def create_job():
     }
     
     db.jobs.insert_one(new_job)
+    add_alumni_points(current_user['id'], 6)
     return jsonify({"success": True, "message": "Job posted successfully!"}), 201
 
 @app.route('/api/jobs/<job_id>/apply', methods=['POST'])
@@ -779,6 +804,7 @@ def respond_mentorship_request(req_id):
             "status": "accepted",
             "created_at": datetime.now()
         })
+        add_alumni_points(current_user['id'], 5)
         
     return jsonify({"success": True, "message": f"Request {status}."}), 200
 
@@ -909,6 +935,7 @@ def assign_task():
         "created_at": datetime.now()
     }
     db.tasks.insert_one(new_task)
+    add_alumni_points(current_user['id'], 3)
     return jsonify({"success": True, "message": "Task assigned."}), 201
 
 @app.route('/api/mentorship/tasks', methods=['GET'])
@@ -1001,6 +1028,10 @@ def send_message():
         }
 
         result = messages_collection.insert_one(message_doc)
+        
+        if current_user and current_user.get('type') == 'alumni':
+            add_alumni_points(current_user['id'], 2)
+            
         return jsonify({"success": True, "message": "Message sent", "message_id": str(result.inserted_id)}), 201
     except Exception as e:
         print(f"Error sending message: {str(e)}")
@@ -1110,6 +1141,92 @@ def get_chat_connections():
             })
 
     return jsonify({"connections": chat_connections, "success": True}), 200
+
+# --- Leaderboard & Engagement Features ---
+
+@app.route('/api/leaderboard', methods=['GET'])
+def get_leaderboard():
+    try:
+        now = datetime.now()
+        current_month_str = now.strftime('%Y-%m')
+        
+        # Reset everyone's monthly_points to 0 if their last_reset_month is not current
+        users_collection.update_many(
+            {
+                "type": "alumni",
+                "$or": [
+                    {"last_reset_month": {"$exists": False}},
+                    {"last_reset_month": {"$ne": current_month_str}}
+                ]
+            },
+            {"$set": {"monthly_points": 0, "last_reset_month": current_month_str}}
+        )
+
+        # Fetch top alumni sorted by monthly_points desc
+        top_alumni_docs = list(users_collection.find({"type": "alumni"}).sort("monthly_points", -1).limit(10))
+        
+        leaderboard = []
+        for rank, al in enumerate(top_alumni_docs, 1):
+            if al.get('monthly_points', 0) == 0 and rank > 5:
+                # Optionally, hide 0 point users beyond top 5? Or just show them. Let's just show up to 10.
+                pass
+                
+            leaderboard.append({
+                "rank": rank,
+                "id": str(al['_id']),
+                "name": al.get('name', 'Alumni User'),
+                "profile_image": al.get('profile_image', ''),
+                "role": al.get('profession') or al.get('designation', ''),
+                "company": al.get('company_name', ''),
+                "monthly_points": al.get('monthly_points', 0),
+                "activity_points": al.get('activity_points', 0)
+            })
+
+        return jsonify({"leaderboard": leaderboard, "success": True}), 200
+    except Exception as e:
+        print(f"Error fetching leaderboard: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route('/api/storyboards/story_of_week', methods=['GET'])
+def get_story_of_week():
+    try:
+        # Priority 1: Admin Selected (is_story_of_week = True)
+        sow = db.stories.find_one({"is_story_of_week": True})
+        
+        if not sow:
+            # Priority 2: Most Likes, then Engagement, then created_at
+            sow = db.stories.find_one(sort=[("likes", -1), ("engagement_count", -1), ("created_at", -1)])
+            
+        if not sow:
+            return jsonify({"success": False, "message": "No stories found"}), 404
+            
+        story_dict = doc_to_dict(sow)
+        
+        # Grab alumni profile image to send
+        alumni = users_collection.find_one({"_id": ObjectId(sow['alumni_id'])})
+        story_dict['alumni_profile_image'] = alumni.get('profile_image', '') if alumni else ''
+        
+        return jsonify({"story": story_dict, "success": True}), 200
+    except Exception as e:
+        print(f"Error fetching story of the week: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route('/api/storyboards/<story_id>/star', methods=['POST'])
+def star_story_of_week(story_id):
+    try:
+        # First reset any existing
+        db.stories.update_many({}, {"$set": {"is_story_of_week": False}})
+        # Star this one
+        result = db.stories.update_one({"_id": ObjectId(story_id)}, {"$set": {"is_story_of_week": True}})
+        
+        if result.modified_count > 0:
+            return jsonify({"success": True, "message": "Marked as Story of the Week!"}), 200
+        return jsonify({"success": False, "message": "Story not found."}), 404
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

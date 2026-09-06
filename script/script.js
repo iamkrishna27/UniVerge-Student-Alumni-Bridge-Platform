@@ -33,6 +33,7 @@ const resourceBankPage = document.getElementById('resource-bank-page');
 const confidenceCornerPage = document.getElementById('confidence-corner-page');
 const chatPage = document.getElementById('chat-page');
 const publicProfilePage = document.getElementById('public-profile-page');
+const leaderboardPage = document.getElementById('leaderboard-page');
 
 // Auth Elements
 const authTitle = document.getElementById('auth-title');
@@ -244,7 +245,7 @@ function showPage(pageId, requireAuth = true) {
     const pages = [
         landingPage, authPage, dashboardPage, profilePage,
         storyboardPage, jobBoardPage, quickConnectPage,
-        resourceBankPage, confidenceCornerPage, chatPage, publicProfilePage
+        resourceBankPage, confidenceCornerPage, chatPage, publicProfilePage, leaderboardPage
     ];
 
     pages.forEach(page => {
@@ -266,6 +267,9 @@ function showPage(pageId, requireAuth = true) {
 
         // Load page-specific data explicitly when page is opened
         switch (pageId) {
+            case 'leaderboard':
+                loadLeaderboard();
+                break;
             case 'dashboard':
                 loadDashboardData();
                 break;
@@ -773,6 +777,8 @@ function loadDashboardData() {
     // Dashboard widgets for alumni and students
     loadRecentActivity();
     loadUpcomingSessions();
+    loadLeaderboard();
+    loadStoryOfWeek();
 }
 
 /**
@@ -889,6 +895,113 @@ async function loadUpcomingSessions() {
     } catch (error) {
         console.error('loadUpcomingSessions error:', error);
         container.innerHTML = '<p class="text-red-500 text-sm">Failed to load upcoming sessions.</p>';
+    }
+}
+
+// ============================================
+// Engagement Features (Leaderboard & Story)
+// ============================================
+
+async function loadLeaderboard() {
+    const dashContainer = document.getElementById('dashboard-leaderboard-container');
+    const fullContainer = document.getElementById('full-leaderboard-container');
+    
+    if (dashContainer) dashContainer.innerHTML = '<p class="text-gray-500 text-sm">Loading...</p>';
+    if (fullContainer) fullContainer.innerHTML = '<p class="text-gray-500 text-center">Loading...</p>';
+
+    try {
+        const response = await fetch('/api/leaderboard');
+        const data = await response.json();
+
+        if (data.success && data.leaderboard.length > 0) {
+            // Render Dashboard (Top 5)
+            if (dashContainer) {
+                const top5 = data.leaderboard.slice(0, 5);
+                dashContainer.innerHTML = top5.map(al => renderLeaderboardCard(al)).join('');
+            }
+            
+            // Render Full (Top 10)
+            if (fullContainer) {
+                fullContainer.innerHTML = data.leaderboard.map(al => renderLeaderboardCard(al)).join('');
+            }
+        } else {
+            if (dashContainer) dashContainer.innerHTML = '<p class="text-gray-500 text-sm">No leaderboard data found yet.</p>';
+            if (fullContainer) fullContainer.innerHTML = '<p class="text-gray-500 text-center">No leaderboard data found yet.</p>';
+        }
+    } catch (e) {
+        console.error('Error fetching leaderboard:', e);
+        if (dashContainer) dashContainer.innerHTML = '<p class="text-red-500 text-sm">Error loading leaderboard.</p>';
+        if (fullContainer) fullContainer.innerHTML = '<p class="text-red-500 text-center">Error loading leaderboard.</p>';
+    }
+}
+
+function renderLeaderboardCard(alumni) {
+    let rankBadge = '';
+    if (alumni.rank === 1) rankBadge = '<div class="w-8 h-8 flex shrink-0 items-center justify-center bg-yellow-100 text-yellow-600 rounded-full font-bold shadow-sm">🥇</div>';
+    else if (alumni.rank === 2) rankBadge = '<div class="w-8 h-8 flex shrink-0 items-center justify-center bg-gray-200 text-gray-500 rounded-full font-bold shadow-sm">🥈</div>';
+    else if (alumni.rank === 3) rankBadge = '<div class="w-8 h-8 flex shrink-0 items-center justify-center bg-orange-100 text-orange-600 rounded-full font-bold shadow-sm">🥉</div>';
+    else rankBadge = `<div class="w-8 h-8 flex shrink-0 items-center justify-center bg-indigo-50 text-indigo-500 rounded-full font-bold shadow-sm">#${alumni.rank}</div>`;
+
+    return `
+        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl hover:shadow-md transition cursor-pointer border border-transparent hover:border-indigo-200 dark:hover:border-indigo-900" onclick="openProfile('${alumni.id}', 'alumni')">
+            <div class="flex items-center gap-3 overflow-hidden">
+                ${rankBadge}
+                <img src="${alumni.profile_image || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff'}" class="w-10 h-10 shrink-0 rounded-full object-cover shadow-sm bg-white border border-gray-200">
+                <div class="truncate">
+                    <h4 class="font-bold text-gray-900 dark:text-white text-sm truncate">${alumni.name}</h4>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">${alumni.role} ${alumni.company ? `at ${alumni.company}` : ''}</p>
+                </div>
+            </div>
+            <div class="text-right pl-2 shrink-0">
+                <span class="font-black text-indigo-600 dark:text-indigo-400">${alumni.monthly_points}</span>
+                <p class="text-[9px] text-gray-500 uppercase tracking-widest">Pts</p>
+            </div>
+        </div>
+    `;
+}
+
+async function loadStoryOfWeek() {
+    const container = document.getElementById('dashboard-story-of-week-container');
+    if (!container) return;
+
+    container.innerHTML = '<p class="text-gray-500 text-sm">Loading story...</p>';
+
+    try {
+        const response = await fetch('/api/storyboards/story_of_week');
+        const data = await response.json();
+
+        if (data.success && data.story) {
+            const story = data.story;
+            let previewText = story.story || '';
+            if (previewText.length > 100) {
+                previewText = previewText.substring(0, 100) + '...';
+            }
+
+            container.innerHTML = `
+                <div class="flex flex-col gap-4">
+                    <div class="flex items-center gap-3 cursor-pointer" onclick="openProfile('${story.alumni_id}', 'alumni')">
+                        <img src="${story.alumni_profile_image || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff'}" class="w-12 h-12 rounded-full object-cover shadow-sm bg-white">
+                        <div>
+                            <p class="text-[10px] text-pink-500 font-bold uppercase tracking-wider mb-0.5">By ${story.name}</p>
+                            <p class="text-xs text-gray-500 truncate max-w-[200px]">${story.profession}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border-l-4 border-pink-500 cursor-pointer hover:shadow-md transition group" onclick="showPage('storyboard')">
+                        <h4 class="font-bold text-gray-900 dark:text-white mb-2 line-clamp-1 group-hover:text-pink-600 transition">${story.story_title}</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 italic mb-3">"${previewText}"</p>
+                        <button class="text-sm text-pink-600 dark:text-pink-400 font-bold hover:underline flex items-center gap-1">
+                            Read Full Story <i class="fas fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<p class="text-gray-500 text-sm">No stories available this week.</p>';
+        }
+    } catch (e) {
+        console.error('Error fetching story of week:', e);
+        container.innerHTML = '<p class="text-red-500 text-sm">Error loading story.</p>';
     }
 }
 
