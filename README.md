@@ -245,20 +245,11 @@ python app.py
 
 ---
 
-## 🤝 Contributing
+## Contributors
 
-Contributions are welcome!
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes
-4. Push to the branch and open a Pull Request
-
----
-
-## 👤 Contributors
-
-- **Krishna**
+* Krishna N
+* Student Developer — UniVerge Team
+* Alumni Mentorship Platform Project
 
 ---
 
